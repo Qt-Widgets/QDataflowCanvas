@@ -86,16 +86,40 @@ void QDataflowCanvas::itemTextChanged()
     if(!item) return;
     QDataflowNode *node = dynamic_cast<QDataflowNode*>(item);
     if(!node) return;
-    QString txt = txtItem->document()->toPlainText();
-    if(txt.contains('\n'))
-    {
-        txt.replace("\n", "");
-        txtItem->document()->setPlainText(txt);
-        node->exitEditMode();
-        return;
-    }
     node->adjust();
 }
+
+class QDataflowTextLabel : public QGraphicsTextItem
+{
+public:
+    QDataflowTextLabel(QDataflowNode *node, QGraphicsItem *parent)
+        : QGraphicsTextItem(parent), node_(node)
+    {
+
+    }
+
+    bool sceneEvent(QEvent *event)
+    {
+        if(event->type() == QEvent::KeyPress)
+        {
+            QKeyEvent *keyEvent = static_cast<QKeyEvent*> (event);
+            switch(keyEvent->key())
+            {
+            case Qt::Key_Tab:
+                return true;
+            case Qt::Key_Return:
+                node_->exitEditMode();
+                return true;
+            default:
+                break;
+            }
+        }
+        return QGraphicsTextItem::sceneEvent(event);
+    }
+
+private:
+    QDataflowNode *node_;
+};
 
 QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlets, int numOutlets)
     : canvas_(canvas)
@@ -103,7 +127,6 @@ QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlet
     setFlag(ItemIsMovable);
     setFlag(ItemSendsGeometryChanges);
     setFlag(ItemIsSelectable);
-    setFlag(ItemIsFocusable);
 
     setAcceptedMouseButtons(Qt::LeftButton);
 
@@ -126,10 +149,8 @@ QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlet
     objectBox_->setPen(QPen(Qt::black));
     objectBox_->setFlag(QGraphicsItem::ItemStacksBehindParent);
 
-    textItem_ = new QGraphicsTextItem(objectBox_);
+    textItem_ = new QDataflowTextLabel(this, objectBox_);
     textItem_->document()->setPlainText(text);
-    textItem_->setTextInteractionFlags(Qt::TextEditable);
-    //textItem_->setTextInteractionFlags(Qt::TextEditorInteraction);
 
     QObject::connect(textItem_->document(), &QTextDocument::contentsChanged, canvas, &QDataflowCanvas::itemTextChanged);
 
@@ -228,17 +249,23 @@ void QDataflowNode::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 void QDataflowNode::enterEditMode()
 {
     setSelected(true);
+    textItem_->setFlag(QGraphicsItem::ItemIsFocusable, true);
+    textItem_->setTextInteractionFlags(Qt::TextEditable);
+    //textItem_->setTextInteractionFlags(Qt::TextEditorInteraction);
     textItem_->setFocus();
 }
 
 void QDataflowNode::exitEditMode()
 {
-    setFocus();
+    textItem_->clearFocus();
+    textItem_->setFlag(QGraphicsItem::ItemIsFocusable, false);
+    textItem_->setTextInteractionFlags(Qt::NoTextInteraction);
 }
 
 bool QDataflowNode::isInEditMode() const
 {
-    return textItem_->hasFocus();
+    if(!textItem_) return false;
+    return (textItem_->textInteractionFlags() & Qt::TextEditable) && textItem_->hasFocus();
 }
 
 QVariant QDataflowNode::itemChange(GraphicsItemChange change, const QVariant &value)
@@ -255,8 +282,9 @@ QVariant QDataflowNode::itemChange(GraphicsItemChange change, const QVariant &va
             inputHeader_->setPen(pen);
             objectBox_->setPen(pen);
             outputHeader_->setPen(pen);
+            textItem_->setDefaultTextColor(pen.color());
 
-            if(!selected && isInEditMode())
+            if(!selected)
                 exitEditMode();
 
             if(selected)
