@@ -8,11 +8,11 @@
 #include <QMouseEvent>
 #include <QLineEdit>
 
-enum QDataflowType {
-    QDataflowTypeNode = QGraphicsItem::UserType + 1,
-    QDataflowTypeConnection = QGraphicsItem::UserType + 2,
-    QDataflowTypeInlet = QGraphicsItem::UserType + 3,
-    QDataflowTypeOutlet = QGraphicsItem::UserType + 4
+enum QDataflowItemType {
+    QDataflowItemTypeNode = QGraphicsItem::UserType + 1,
+    QDataflowItemTypeConnection = QGraphicsItem::UserType + 2,
+    QDataflowItemTypeInlet = QGraphicsItem::UserType + 3,
+    QDataflowItemTypeOutlet = QGraphicsItem::UserType + 4
 };
 
 class QDataflowNode;
@@ -54,7 +54,7 @@ public:
     QDataflowOutlet * outlet(int index) const {return outlets_.at(index);}
     int outletCount() const {return outlets_.size();}
 
-    int type() const override {return QDataflowTypeNode;}
+    int type() const override {return QDataflowItemTypeNode;}
 
     void setText(QString text);
     QString text() const;
@@ -101,7 +101,7 @@ class QDataflowInlet : public QGraphicsItem
 public:
     QDataflowInlet(QDataflowNode *node, int index);
 
-    int type() const override {return QDataflowTypeInlet;}
+    int type() const override {return QDataflowItemTypeInlet;}
 
     QDataflowNode * node() const {return node_;}
     int index() const {return index_;}
@@ -120,7 +120,7 @@ class QDataflowOutlet : public QGraphicsItem
 public:
     QDataflowOutlet(QDataflowNode *node, int index);
 
-    int type() const override {return QDataflowTypeOutlet;}
+    int type() const override {return QDataflowItemTypeOutlet;}
 
     QDataflowNode * node() const {return node_;}
     int index() const {return index_;}
@@ -149,7 +149,7 @@ public:
 
     void adjust();
 
-    int type() const override {return QDataflowTypeConnection;}
+    int type() const override {return QDataflowItemTypeConnection;}
 
 protected:
     QRectF boundingRect() const override;
