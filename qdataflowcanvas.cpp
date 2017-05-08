@@ -32,6 +32,8 @@ QDataflowCanvas::QDataflowCanvas(QWidget *parent)
     setBackgroundBrush(gradient);
 
     completion_ = new QDataflowTextCompletion();
+
+    setDragMode(QGraphicsView::RubberBandDrag);
 }
 
 QDataflowCanvas::~QDataflowCanvas()
