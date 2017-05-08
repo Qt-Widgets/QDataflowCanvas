@@ -27,6 +27,7 @@ class QDataflowCanvas : public QGraphicsView
     Q_OBJECT
 public:
     QDataflowCanvas(QWidget *parent);
+    virtual ~QDataflowCanvas();
 
     QDataflowNode * add(QPoint pos, const QString &txt, int numInlets = 0, int numOutlets = 0);
     void remove(QDataflowNode *node);
@@ -76,6 +77,8 @@ signals:
 
 private:
     QDataflowTextCompletion *completion_;
+    QSet<QDataflowNode*> ownedNodes_;
+    QSet<QDataflowConnection*> ownedConnections_;
 };
 
 class QDataflowNode : public QGraphicsItem
@@ -244,9 +247,10 @@ private:
 
 class QDataflowNodeTextLabel : public QGraphicsTextItem
 {
-public:
+protected:
     QDataflowNodeTextLabel(QDataflowNode *node, QGraphicsItem *parent);
 
+public:
     bool sceneEvent(QEvent *event);
     void setCompletion(QStringList list);
     void clearCompletion();
@@ -261,6 +265,8 @@ private:
     QList<QGraphicsRectItem*> completionRectItems_;
     int completionIndex_;
     bool completionActive_;
+
+    friend class QDataflowNode;
 };
 
 class QDataflowTextCompletion

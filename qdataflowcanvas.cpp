@@ -34,6 +34,19 @@ QDataflowCanvas::QDataflowCanvas(QWidget *parent)
     completion_ = new QDataflowTextCompletion();
 }
 
+QDataflowCanvas::~QDataflowCanvas()
+{
+    foreach(QDataflowNode *node, ownedNodes_)
+    {
+        delete node;
+    }
+
+    foreach(QDataflowConnection *conn, ownedConnections_)
+    {
+        delete conn;
+    }
+}
+
 QDataflowNode * QDataflowCanvas::add(QPoint pos, const QString &txt, int numInlets, int numOutlets)
 {
     QDataflowNode *node = new QDataflowNode(this, txt, numInlets, numOutlets);
@@ -89,6 +102,8 @@ void QDataflowCanvas::removeNode(QDataflowNode *node)
     }
     scene()->removeItem(node);
 
+    ownedNodes_.insert(node);
+
     notifyNodeRemoved(node);
 }
 
@@ -97,6 +112,8 @@ void QDataflowCanvas::removeConnection(QDataflowConnection *conn)
     scene()->removeItem(conn);
     conn->source()->removeConnection(conn);
     conn->dest()->removeConnection(conn);
+
+    ownedConnections_.insert(conn);
 
     notifyConnectionRemoved(conn);
 }
@@ -552,9 +569,12 @@ void QDataflowOutlet::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
     setCursor(Qt::CrossCursor);
 
-    node()->scene()->removeItem(tmpConn_);
-    delete tmpConn_;
-    tmpConn_ = 0;
+    if(tmpConn_)
+    {
+        node()->scene()->removeItem(tmpConn_);
+        delete tmpConn_;
+        tmpConn_ = 0;
+    }
 
     if(QDataflowInlet *inlet = node()->canvas()->itemAtT<QDataflowInlet>(event->scenePos()))
     {
