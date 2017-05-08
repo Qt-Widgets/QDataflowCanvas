@@ -21,13 +21,8 @@ private:
 private slots:
     void setupNode(QDataflowNode *node);
     void processData();
-
-public slots:
     void onNodeTextChanged(QDataflowNode *node);
     void onNodeAdded(QDataflowNode *node);
-    void onNodeRemoved(QDataflowNode *node);
-    void onConnectionAdded(QDataflowConnection *conn);
-    void onConnectionRemoved(QDataflowConnection *conn);
 };
 
 #endif // MAINWINDOW_H

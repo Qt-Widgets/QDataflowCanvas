@@ -90,22 +90,16 @@ MainWindow::MainWindow(QWidget *parent)
     setupUi(this);
 
     classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink";
-
     canvas->setCompletion(this);
 
     QObject::connect(sendButton, &QPushButton::clicked, this, &MainWindow::processData);
-
     QObject::connect(canvas, &QDataflowCanvas::nodeTextChanged, this, &MainWindow::onNodeTextChanged);
     QObject::connect(canvas, &QDataflowCanvas::nodeAdded, this, &MainWindow::onNodeAdded);
-    QObject::connect(canvas, &QDataflowCanvas::nodeRemoved, this, &MainWindow::onNodeRemoved);
-    QObject::connect(canvas, &QDataflowCanvas::connectionAdded, this, &MainWindow::onConnectionAdded);
-    QObject::connect(canvas, &QDataflowCanvas::connectionRemoved, this, &MainWindow::onConnectionRemoved);
 
+    // set up a small dataflow graph:
     QDataflowNode *source = canvas->add(QPoint(100, 50), "source");
-    source->setMetaObject(new DFSource());
     QDataflowNode *add = canvas->add(QPoint(100, 100), "add 5");
     QDataflowNode *sink = canvas->add(QPoint(100, 150), "sink");
-
     canvas->connect(source, 0, add, 0);
     canvas->connect(add, 0, sink, 0);
 }
@@ -118,10 +112,8 @@ MainWindow::~MainWindow()
 void MainWindow::complete(QString txt, QStringList &completionList)
 {
     foreach(QString className, classList)
-    {
         if(className.startsWith(txt))
             completionList << className;
-    }
 }
 
 void MainWindow::setupNode(QDataflowNode *node)
@@ -146,29 +138,10 @@ void MainWindow::processData()
 
 void MainWindow::onNodeTextChanged(QDataflowNode *node)
 {
-    qDebug() << "node changed:" << reinterpret_cast<void*>(node);
-
     setupNode(node);
 }
 
 void MainWindow::onNodeAdded(QDataflowNode *node)
 {
-    qDebug() << "node added:" << reinterpret_cast<void*>(node);
-
     setupNode(node);
-}
-
-void MainWindow::onNodeRemoved(QDataflowNode *node)
-{
-    qDebug() << "node removed:" << reinterpret_cast<void*>(node);
-}
-
-void MainWindow::onConnectionAdded(QDataflowConnection *conn)
-{
-    qDebug() << "connection added:" << reinterpret_cast<void*>(conn);
-}
-
-void MainWindow::onConnectionRemoved(QDataflowConnection *conn)
-{
-    qDebug() << "connection removed:" << reinterpret_cast<void*>(conn);
 }
