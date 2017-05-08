@@ -1,10 +1,36 @@
 #include "mainwindow.h"
 #include "qdataflowcanvas.h"
 
+class Completion : public QDataflowTextCompletion
+{
+public:
+    Completion()
+    {
+        classList << "add";
+        classList << "node";
+        classList << "nodebuffer";
+        classList << "norm";
+        classList << "trigger";
+    }
+
+    void complete(QString txt, QStringList &completionList)
+    {
+        foreach(QString className, classList)
+        {
+            if(className.startsWith(txt))
+                completionList << className;
+        }
+    }
+
+private:
+    QStringList classList;
+};
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     canvas = new QDataflowCanvas(this);
+    canvas->setCompletion(new Completion);
     setCentralWidget(canvas);
 
     QObject::connect(canvas, &QDataflowCanvas::nodeTextChanged, this, &MainWindow::onNodeTextChanged);

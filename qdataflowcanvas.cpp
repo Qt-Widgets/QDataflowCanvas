@@ -30,6 +30,8 @@ QDataflowCanvas::QDataflowCanvas(QWidget *parent)
     gradient.setColorAt(0, QColor(240,240,240));
     gradient.setColorAt(1, QColor(160,160,160));
     setBackgroundBrush(gradient);
+
+    completion_ = new QDataflowTextCompletion();
 }
 
 QDataflowNode * QDataflowCanvas::add(QPoint pos, const QString &txt, int numInlets, int numOutlets)
@@ -174,49 +176,15 @@ void QDataflowCanvas::itemTextEditorTextChange()
     if(!senderParent) return;
     QObject *senderGrandParent = senderParent->parent();
     if(!senderGrandParent) return;
-    QGraphicsTextItem *txtItem = qobject_cast<QGraphicsTextItem*>(senderGrandParent);
+    QDataflowNodeTextLabel *txtItem = dynamic_cast<QDataflowNodeTextLabel*>(senderGrandParent);
     if(!txtItem) return;
     QGraphicsItem *item = txtItem->topLevelItem();
     if(!item) return;
     QDataflowNode *node = dynamic_cast<QDataflowNode*>(item);
     if(!node) return;
     node->adjust();
+    txtItem->complete();
 }
-
-class QDataflowTextLabel : public QGraphicsTextItem
-{
-public:
-    QDataflowTextLabel(QDataflowNode *node, QGraphicsItem *parent)
-        : QGraphicsTextItem(parent), node_(node)
-    {
-
-    }
-
-    bool sceneEvent(QEvent *event)
-    {
-        if(event->type() == QEvent::KeyPress)
-        {
-            QKeyEvent *keyEvent = static_cast<QKeyEvent*> (event);
-            switch(keyEvent->key())
-            {
-            case Qt::Key_Tab:
-                return true;
-            case Qt::Key_Escape:
-                node_->exitEditMode(true);
-                return true;
-            case Qt::Key_Return:
-                node_->exitEditMode(false);
-                return true;
-            default:
-                break;
-            }
-        }
-        return QGraphicsTextItem::sceneEvent(event);
-    }
-
-private:
-    QDataflowNode *node_;
-};
 
 QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlets, int numOutlets, bool valid)
     : canvas_(canvas), valid_(valid)
@@ -237,7 +205,7 @@ QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlet
 
     outputHeader_ = new QGraphicsRectItem(this);
 
-    textItem_ = new QDataflowTextLabel(this, objectBox_);
+    textItem_ = new QDataflowNodeTextLabel(this, objectBox_);
     textItem_->document()->setPlainText(text);
 
     QObject::connect(textItem_->document(), &QTextDocument::contentsChanged, canvas, &QDataflowCanvas::itemTextEditorTextChange);
@@ -434,6 +402,7 @@ void QDataflowNode::enterEditMode()
     textItem_->setTextInteractionFlags(Qt::TextEditable);
     //textItem_->setTextInteractionFlags(Qt::TextEditorInteraction);
     textItem_->setFocus();
+    textItem_->complete();
 }
 
 void QDataflowNode::exitEditMode(bool revertText)
@@ -672,4 +641,133 @@ void QDataflowConnection::keyPressEvent(QKeyEvent *event)
         event->accept();
     }
     else event->ignore();
+}
+
+QDataflowNodeTextLabel::QDataflowNodeTextLabel(QDataflowNode *node, QGraphicsItem *parent)
+    : QGraphicsTextItem(parent), node_(node), completionIndex_(-1), completionActive_(false)
+{
+}
+
+bool QDataflowNodeTextLabel::sceneEvent(QEvent *event)
+{
+    if(event->type() == QEvent::KeyPress)
+    {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*> (event);
+        switch(keyEvent->key())
+        {
+        case Qt::Key_Tab:
+            return true;
+        case Qt::Key_Escape:
+            if(completionActive_) clearCompletion();
+            else node_->exitEditMode(true);
+            return true;
+        case Qt::Key_Return:
+            if(completionActive_) acceptCompletion();
+            else node_->exitEditMode(false);
+            return true;
+        case Qt::Key_Down:
+            if(completionActive_) cycleCompletion(1);
+            return true;
+        case Qt::Key_Up:
+            if(completionActive_) cycleCompletion(-1);
+            return true;
+        default:
+            break;
+        }
+    }
+    return QGraphicsTextItem::sceneEvent(event);
+}
+
+void QDataflowNodeTextLabel::setCompletion(QStringList list)
+{
+    clearCompletion();
+
+    if(list.empty()) return;
+
+    completionActive_ = true;
+
+    qreal y = boundingRect().height() + 1;
+    foreach(QString str, list)
+    {
+        QGraphicsRectItem *rectItem = new QGraphicsRectItem(this);
+        rectItem->setPos(0, y);
+        QGraphicsSimpleTextItem *item = new QGraphicsSimpleTextItem(rectItem);
+        item->setText(str);
+        completionRectItems_.push_back(rectItem);
+        completionItems_.push_back(item);
+        y += item->boundingRect().height();
+    }
+    qreal maxw = 0;
+    foreach(QGraphicsSimpleTextItem *item, completionItems_)
+        maxw = std::max(maxw, item->boundingRect().width());
+    for(int i = 0; i < completionItems_.length(); i++)
+    {
+        QRectF r = completionItems_[i]->boundingRect();
+        r.setWidth(maxw);
+        completionRectItems_[i]->setRect(r);
+    }
+
+    node_->canvas()->raiseItem(this);
+
+    updateCompletion();
+}
+
+void QDataflowNodeTextLabel::clearCompletion()
+{
+    foreach(QGraphicsItem *item, completionItems_)
+    {
+        node_->canvas()->scene()->removeItem(item);
+        delete item;
+    }
+    completionItems_.clear();
+    foreach(QGraphicsItem *item, completionRectItems_)
+    {
+        node_->canvas()->scene()->removeItem(item);
+        delete item;
+    }
+    completionRectItems_.clear();
+    completionIndex_ = -1;
+    completionActive_ = false;
+}
+
+void QDataflowNodeTextLabel::acceptCompletion()
+{
+    if(completionActive_ && completionIndex_ >= 0)
+    {
+        document()->setPlainText(completionItems_[completionIndex_]->text());
+    }
+    clearCompletion();
+}
+
+void QDataflowNodeTextLabel::cycleCompletion(int d)
+{
+    int n = completionItems_.length();
+    if(completionIndex_ == -1 && d == -1) completionIndex_ = n - 1;
+    else completionIndex_ += d;
+    while(completionIndex_ < 0) completionIndex_ += n;
+    while(completionIndex_ >= n) completionIndex_ -= n;
+    updateCompletion();
+}
+
+void QDataflowNodeTextLabel::updateCompletion()
+{
+    for(int i = 0; i < completionItems_.length(); i++)
+    {
+        completionRectItems_[i]->setBrush(i == completionIndex_ ? Qt::blue : Qt::white);
+        completionItems_[i]->setPen(QPen(i == completionIndex_ ? Qt::white : Qt::black));
+    }
+}
+
+void QDataflowNodeTextLabel::complete()
+{
+    QString txt = document()->toPlainText();
+    QStringList completionList;
+    node_->canvas()->completion()->complete(txt, completionList);
+    setCompletion(completionList);
+}
+
+void QDataflowTextCompletion::complete(QString nodeText, QStringList &completionList)
+{
+    Q_UNUSED(nodeText);
+    Q_UNUSED(completionList);
 }

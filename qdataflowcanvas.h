@@ -12,6 +12,8 @@ class QDataflowNode;
 class QDataflowInlet;
 class QDataflowOutlet;
 class QDataflowConnection;
+class QDataflowTextCompletion;
+class QDataflowNodeTextLabel;
 
 enum QDataflowItemType {
     QDataflowItemTypeNode = QGraphicsItem::UserType + 1,
@@ -32,13 +34,19 @@ public:
     void connect(QDataflowNode *source, int outletIndex, QDataflowNode *dest, int inletIndex);
     void disconnect(QDataflowNode *source, int outletIndex, QDataflowNode *dest, int inletIndex);
 
+    QDataflowTextCompletion * completion() const {return completion_;}
+    void setCompletion(QDataflowTextCompletion *completion) {completion_ = completion;}
+
 protected:
     void addNode(QDataflowNode *node);
     void addConnection(QDataflowConnection *conn);
     void removeNode(QDataflowNode *node);
     void removeConnection(QDataflowConnection *conn);
+
+public:
     void raiseItem(QGraphicsItem *item);
 
+protected:
     template<typename T>
     T * itemAtT(const QPointF &point);
 
@@ -65,6 +73,9 @@ signals:
     friend class QDataflowInlet;
     friend class QDataflowOutlet;
     friend class QDataflowConnection;
+
+private:
+    QDataflowTextCompletion *completion_;
 };
 
 class QDataflowNode : public QGraphicsItem
@@ -125,7 +136,7 @@ private:
     QGraphicsRectItem *inputHeader_;
     QGraphicsRectItem *objectBox_;
     QGraphicsRectItem *outputHeader_;
-    QGraphicsTextItem *textItem_;
+    QDataflowNodeTextLabel *textItem_;
     bool valid_;
     QString oldText_;
 
@@ -229,6 +240,33 @@ private:
     friend class QDataflowCanvas;
     friend class QDataflowInlet;
     friend class QDataflowOutlet;
+};
+
+class QDataflowNodeTextLabel : public QGraphicsTextItem
+{
+public:
+    QDataflowNodeTextLabel(QDataflowNode *node, QGraphicsItem *parent);
+
+    bool sceneEvent(QEvent *event);
+    void setCompletion(QStringList list);
+    void clearCompletion();
+    void acceptCompletion();
+    void cycleCompletion(int d);
+    void updateCompletion();
+    void complete();
+
+private:
+    QDataflowNode *node_;
+    QList<QGraphicsSimpleTextItem*> completionItems_;
+    QList<QGraphicsRectItem*> completionRectItems_;
+    int completionIndex_;
+    bool completionActive_;
+};
+
+class QDataflowTextCompletion
+{
+public:
+    virtual void complete(QString nodeText, QStringList &completionList);
 };
 
 template<typename T>
