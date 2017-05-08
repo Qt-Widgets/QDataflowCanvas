@@ -409,7 +409,7 @@ void QDataflowNode::exitEditMode(bool revertText)
 {
     if(revertText)
         textItem_->setPlainText(oldText_);
-    else
+    else if(oldText_ != text())
         canvas()->notifyNodeTextChanged(this);
     textItem_->clearFocus();
     textItem_->setFlag(QGraphicsItem::ItemIsFocusable, false);
@@ -432,7 +432,10 @@ QVariant QDataflowNode::itemChange(GraphicsItemChange change, const QVariant &va
         {
             adjust();
             if(value.toBool())
+            {
                 canvas()->raiseItem(this);
+                oldText_ = text();
+            }
             else
                 exitEditMode(false);
         }
