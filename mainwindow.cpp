@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "qdataflowcanvas.h"
 
+#include <QDebug>
+
 class Completion : public QDataflowTextCompletion
 {
 public:
@@ -35,6 +37,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(canvas, &QDataflowCanvas::nodeTextChanged, this, &MainWindow::onNodeTextChanged);
     QObject::connect(canvas, &QDataflowCanvas::nodeAdded, this, &MainWindow::onNodeAdded);
+    QObject::connect(canvas, &QDataflowCanvas::nodeRemoved, this, &MainWindow::onNodeRemoved);
+    QObject::connect(canvas, &QDataflowCanvas::connectionAdded, this, &MainWindow::onConnectionAdded);
+    QObject::connect(canvas, &QDataflowCanvas::connectionRemoved, this, &MainWindow::onConnectionRemoved);
 
     QDataflowNode *node1 = canvas->add(QPoint(-50, -50), "node 1 2");
     QDataflowNode *node2 = canvas->add(QPoint(-50, 0), "node 1 1");
@@ -65,10 +70,29 @@ void MainWindow::processNode(QDataflowNode *node)
 
 void MainWindow::onNodeTextChanged(QDataflowNode *node)
 {
+    qDebug() << "node changed:" << reinterpret_cast<void*>(node);
+
     processNode(node);
 }
 
 void MainWindow::onNodeAdded(QDataflowNode *node)
 {
+    qDebug() << "node added:" << reinterpret_cast<void*>(node);
+
     processNode(node);
+}
+
+void MainWindow::onNodeRemoved(QDataflowNode *node)
+{
+    qDebug() << "node removed:" << reinterpret_cast<void*>(node);
+}
+
+void MainWindow::onConnectionAdded(QDataflowConnection *conn)
+{
+    qDebug() << "connection added:" << reinterpret_cast<void*>(conn);
+}
+
+void MainWindow::onConnectionRemoved(QDataflowConnection *conn)
+{
+    qDebug() << "connection removed:" << reinterpret_cast<void*>(conn);
 }

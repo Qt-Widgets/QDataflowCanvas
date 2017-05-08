@@ -5,6 +5,7 @@
 
 class QDataflowCanvas;
 class QDataflowNode;
+class QDataflowConnection;
 
 class MainWindow : public QMainWindow
 {
@@ -22,6 +23,9 @@ private:
 public slots:
     void onNodeTextChanged(QDataflowNode *node);
     void onNodeAdded(QDataflowNode *node);
+    void onNodeRemoved(QDataflowNode *node);
+    void onConnectionAdded(QDataflowConnection *conn);
+    void onConnectionRemoved(QDataflowConnection *conn);
 };
 
 #endif // MAINWINDOW_H
