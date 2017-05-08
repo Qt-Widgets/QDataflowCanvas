@@ -210,15 +210,13 @@ QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlet
     setFlag(ItemSendsGeometryChanges);
     setFlag(ItemIsSelectable);
     setFlag(ItemIsFocusable);
-
     setAcceptedMouseButtons(Qt::LeftButton);
-
+    setAcceptHoverEvents(true);
     setCacheMode(DeviceCoordinateCache);
 
     inputHeader_ = new QGraphicsRectItem(this);
 
     objectBox_ = new QGraphicsRectItem(this);
-    objectBox_->setFlag(QGraphicsItem::ItemStacksBehindParent);
 
     outputHeader_ = new QGraphicsRectItem(this);
 
@@ -360,9 +358,11 @@ void QDataflowNode::adjustConnections() const
 
 QRectF QDataflowNode::boundingRect() const
 {
-    return objectBox_->boundingRect()
-            .united(inputHeader_->boundingRect())
-            .united(outputHeader_->boundingRect());
+    QRectF r = objectBox_->boundingRect();
+    r.setHeight(r.height() + 2 * ioletHeight());
+    qreal adj = ioletHeight();
+    r.adjust(-adj, -adj, adj, adj);
+    return r;
 }
 
 void QDataflowNode::adjust()
@@ -426,8 +426,13 @@ QBrush QDataflowNode::headerBrush() const
 
 void QDataflowNode::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
-    Q_UNUSED(painter);
-    Q_UNUSED(option);
+    bool sel = option->state & QStyle::State_Selected,
+            hov = option->state & QStyle::State_MouseOver;
+
+    if(hov)
+    {
+        painter->fillRect(boundingRect(), sel ? Qt::cyan : Qt::gray);
+    }
 }
 
 void QDataflowNode::enterEditMode()
@@ -634,8 +639,8 @@ QDataflowConnection::QDataflowConnection(QDataflowOutlet *source, QDataflowInlet
 {
     setFlag(ItemIsSelectable);
     setFlag(ItemIsFocusable);
-
     setAcceptedMouseButtons(Qt::LeftButton);
+    setAcceptHoverEvents(true);
 
     source_->addConnection(this);
     dest_->addConnection(this);
@@ -667,14 +672,17 @@ QRectF QDataflowConnection::boundingRect() const
 
 QPainterPath QDataflowConnection::shape() const
 {
-    int k = 1;
-    QPoint d[] = {QPoint(k, 0), QPoint(0, k), QPoint(k, k), QPoint(k, -k)};
-    QPolygonF p;
-    for(int i = 0; i < 4; i++)
-        p = p.united(QPolygonF() << (sourcePoint_ - d[i]) << (sourcePoint_ + d[i]) <<
-              (destPoint_ + d[i]) << (destPoint_ - d[i]));
+    QPointF dp = destPoint_ - sourcePoint_;
+    qreal angle = atan2(dp.y(), dp.x());
+    QPointF a(cos(angle + M_PI_2), sin(angle + M_PI_2)),
+            b(cos(angle - M_PI_2), sin(angle - M_PI_2));
+    int k = source_->node()->ioletHeight();
     QPainterPath path;
-    path.addPolygon(p);
+    path.addPolygon(QPolygonF()
+                    << (sourcePoint_ + k * a)
+                    << (destPoint_ + k * a)
+                    << (destPoint_ + k * b)
+                    << (sourcePoint_ + k * b));
     return path;
 }
 
@@ -687,7 +695,15 @@ void QDataflowConnection::paint(QPainter *painter, const QStyleOptionGraphicsIte
     if(qFuzzyCompare(line.length(), qreal(0.)))
         return;
 
-    painter->setPen(QPen(option->state & QStyle::State_Selected ? Qt::blue : Qt::black, 1, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    bool sel = option->state & QStyle::State_Selected,
+            hov = option->state & QStyle::State_MouseOver;
+
+    if(hov)
+    {
+        painter->fillPath(shape(), sel ? Qt::cyan : Qt::gray);
+    }
+
+    painter->setPen(QPen(sel ? Qt::blue : Qt::black, 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter->drawLine(line);
 }
 
