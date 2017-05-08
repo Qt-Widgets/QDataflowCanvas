@@ -32,14 +32,71 @@ QDataflowCanvas::QDataflowCanvas(QWidget *parent)
     setBackgroundBrush(gradient);
 }
 
-void QDataflowCanvas::addItem(QGraphicsItem *item)
+QDataflowNode * QDataflowCanvas::add(QPoint pos, const QString &txt, int numInlets, int numOutlets)
 {
-    scene()->addItem(item);
+    QDataflowNode *node = new QDataflowNode(this, txt, numInlets, numOutlets);
+    node->setPos(pos);
+    addNode(node);
+    return node;
 }
 
-void QDataflowCanvas::removeItem(QGraphicsItem *item)
+void QDataflowCanvas::remove(QDataflowNode *node)
 {
-    scene()->removeItem(item);
+    removeNode(node);
+}
+
+void QDataflowCanvas::connect(QDataflowNode *source, int outletIndex, QDataflowNode *dest, int inletIndex)
+{
+    addConnection(new QDataflowConnection(source->outlet(outletIndex), dest->inlet(inletIndex)));
+}
+
+void QDataflowCanvas::disconnect(QDataflowNode *source, int outletIndex, QDataflowNode *dest, int inletIndex)
+{
+    foreach(QDataflowConnection *conn, source->outlet(outletIndex)->connections())
+        if(conn->dest() == dest->inlet(inletIndex))
+            removeConnection(conn);
+}
+
+void QDataflowCanvas::addNode(QDataflowNode *node)
+{
+    scene()->addItem(node);
+
+    notifyNodeAdded(node);
+}
+
+void QDataflowCanvas::addConnection(QDataflowConnection *conn)
+{
+    scene()->addItem(conn);
+
+    notifyConnectionAdded(conn);
+}
+
+void QDataflowCanvas::removeNode(QDataflowNode *node)
+{
+    for(int i = 0; i < node->inletCount(); i++)
+    {
+        QDataflowInlet *inlet = node->inlet(i);
+        foreach(QDataflowConnection *conn, inlet->connections())
+            removeConnection(conn);
+    }
+    for(int i = 0; i < node->outletCount(); i++)
+    {
+        QDataflowOutlet *outlet = node->outlet(i);
+        foreach(QDataflowConnection *conn, outlet->connections())
+            removeConnection(conn);
+    }
+    scene()->removeItem(node);
+
+    notifyNodeRemoved(node);
+}
+
+void QDataflowCanvas::removeConnection(QDataflowConnection *conn)
+{
+    scene()->removeItem(conn);
+    conn->source()->removeConnection(conn);
+    conn->dest()->removeConnection(conn);
+
+    notifyConnectionRemoved(conn);
 }
 
 void QDataflowCanvas::raiseItem(QGraphicsItem *item)
@@ -51,11 +108,48 @@ void QDataflowCanvas::raiseItem(QGraphicsItem *item)
 
     if(QDataflowNode *node = dynamic_cast<QDataflowNode*>(item))
     {
-        foreach(QDataflowConnection *conn, node->connections())
+        for(int i = 0; i < node->inletCount(); i++)
         {
-            raiseItem(conn);
+            QDataflowInlet *inlet = node->inlet(i);
+            foreach(QDataflowConnection *conn, inlet->connections())
+            {
+                raiseItem(conn);
+            }
+        }
+        for(int i = 0; i < node->outletCount(); i++)
+        {
+            QDataflowOutlet *outlet = node->outlet(i);
+            foreach(QDataflowConnection *conn, outlet->connections())
+            {
+                raiseItem(conn);
+            }
         }
     }
+}
+
+void QDataflowCanvas::notifyNodeTextChanged(QDataflowNode *node)
+{
+    emit nodeTextChanged(node);
+}
+
+void QDataflowCanvas::notifyNodeAdded(QDataflowNode *node)
+{
+    emit nodeAdded(node);
+}
+
+void QDataflowCanvas::notifyNodeRemoved(QDataflowNode *node)
+{
+    emit nodeRemoved(node);
+}
+
+void QDataflowCanvas::notifyConnectionAdded(QDataflowConnection *conn)
+{
+    emit connectionAdded(conn);
+}
+
+void QDataflowCanvas::notifyConnectionRemoved(QDataflowConnection *conn)
+{
+    emit connectionRemoved(conn);
 }
 
 void QDataflowCanvas::mouseDoubleClickEvent(QMouseEvent *event)
@@ -63,8 +157,8 @@ void QDataflowCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     QGraphicsItem *item = itemAt(event->pos());
     if(!item)
     {
-        QDataflowNode *node = new QDataflowNode(this, "", 2, 2);
-        scene()->addItem(node);
+        QDataflowNode *node = new QDataflowNode(this, "", 0, 0, false);
+        addNode(node);
         node->setPos(mapToScene(event->pos()));
         node->enterEditMode();
         event->accept();
@@ -74,7 +168,7 @@ void QDataflowCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     QGraphicsView::mouseDoubleClickEvent(event);
 }
 
-void QDataflowCanvas::itemTextChanged()
+void QDataflowCanvas::itemTextEditorTextChange()
 {
     QObject *senderParent = sender()->parent();
     if(!senderParent) return;
@@ -107,8 +201,11 @@ public:
             {
             case Qt::Key_Tab:
                 return true;
+            case Qt::Key_Escape:
+                node_->exitEditMode(true);
+                return true;
             case Qt::Key_Return:
-                node_->exitEditMode();
+                node_->exitEditMode(false);
                 return true;
             default:
                 break;
@@ -121,68 +218,97 @@ private:
     QDataflowNode *node_;
 };
 
-QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlets, int numOutlets)
-    : canvas_(canvas)
+QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlets, int numOutlets, bool valid)
+    : canvas_(canvas), valid_(valid)
 {
     setFlag(ItemIsMovable);
     setFlag(ItemSendsGeometryChanges);
     setFlag(ItemIsSelectable);
+    setFlag(ItemIsFocusable);
 
     setAcceptedMouseButtons(Qt::LeftButton);
 
     setCacheMode(DeviceCoordinateCache);
 
     inputHeader_ = new QGraphicsRectItem(this);
-    inputHeader_->setBrush(QBrush(Qt::lightGray));
-    inputHeader_->setPen(QPen(Qt::black));
 
-    for(int i = 0; i < numInlets; i++)
+    objectBox_ = new QGraphicsRectItem(this);
+    objectBox_->setFlag(QGraphicsItem::ItemStacksBehindParent);
+
+    outputHeader_ = new QGraphicsRectItem(this);
+
+    textItem_ = new QDataflowTextLabel(this, objectBox_);
+    textItem_->document()->setPlainText(text);
+
+    QObject::connect(textItem_->document(), &QTextDocument::contentsChanged, canvas, &QDataflowCanvas::itemTextEditorTextChange);
+
+    setInletCount(numInlets, true);
+    setOutletCount(numOutlets, true);
+
+    adjust();
+}
+
+void QDataflowNode::setInletCount(int count, bool skipAdjust)
+{
+    while(inlets_.length() > count)
     {
-        QDataflowInlet * inlet = new QDataflowInlet(this, i);
+        QDataflowInlet *lastInlet = inlets_.back();
+        foreach(QDataflowConnection *conn, lastInlet->connections())
+            canvas()->scene()->removeItem(conn);
+        canvas()->scene()->removeItem(lastInlet);
+        inlets_.pop_back();
+        delete lastInlet;
+    }
+
+    while(inlets_.length() < count)
+    {
+        int i = inlets_.length();
+        QDataflowInlet *inlet = new QDataflowInlet(this, i);
         inlet->setParentItem(inputHeader_);
         inlet->setPos(ioletWidth() / 2 + i * (ioletWidth() + ioletSpacing()), ioletHeight() / 2);
         inlets_.push_back(inlet);
     }
 
-    objectBox_ = new QGraphicsRectItem(this);
-    objectBox_->setBrush(QBrush(Qt::white));
-    objectBox_->setPen(QPen(Qt::black));
-    objectBox_->setFlag(QGraphicsItem::ItemStacksBehindParent);
+    if(!skipAdjust)
+        adjust();
+}
 
-    textItem_ = new QDataflowTextLabel(this, objectBox_);
-    textItem_->document()->setPlainText(text);
-
-    QObject::connect(textItem_->document(), &QTextDocument::contentsChanged, canvas, &QDataflowCanvas::itemTextChanged);
-
-    outputHeader_ = new QGraphicsRectItem(this);
-    outputHeader_->setBrush(QBrush(Qt::lightGray));
-    outputHeader_->setPen(QPen(Qt::black));
-
-    for(int i = 0; i < numOutlets; i++)
+void QDataflowNode::setOutletCount(int count, bool skipAdjust)
+{
+    while(outlets_.length() > count)
     {
-        QDataflowOutlet * outlet = new QDataflowOutlet(this, i);
+        QDataflowOutlet *lastOutlet = outlets_.back();
+        foreach(QDataflowConnection *conn, lastOutlet->connections())
+            canvas()->scene()->removeItem(conn);
+        canvas()->scene()->removeItem(lastOutlet);
+        outlets_.pop_back();
+        delete lastOutlet;
+    }
+
+    while(outlets_.length() < count)
+    {
+        int i = outlets_.length();
+        QDataflowOutlet *outlet = new QDataflowOutlet(this, i);
         outlet->setParentItem(outputHeader_);
         outlet->setPos(ioletWidth() / 2 + i * (ioletWidth() + ioletSpacing()), ioletHeight() / 2);
         outlets_.push_back(outlet);
     }
 
-    adjust();
+    if(!skipAdjust)
+        adjust();
 }
 
-void QDataflowNode::addConnection(QDataflowConnection *connection)
+void QDataflowNode::adjustConnections() const
 {
-    connections_ << connection;
-    connection->adjust();
-}
+    foreach(QDataflowInlet *inlet, inlets_)
+    {
+        inlet->adjustConnections();
+    }
 
-void QDataflowNode::removeConnection(QDataflowConnection *connection)
-{
-    connections_.removeAll(connection);
-}
-
-QList<QDataflowConnection*> QDataflowNode::connections() const
-{
-    return connections_;
+    foreach(QDataflowOutlet *outlet, outlets_)
+    {
+        outlet->adjustConnections();
+    }
 }
 
 void QDataflowNode::setText(QString text)
@@ -195,21 +321,45 @@ QString QDataflowNode::text() const
     return textItem_->document()->toPlainText();
 }
 
+void QDataflowNode::setValid(bool valid)
+{
+    valid_ = valid;
+
+    /*if(!valid)
+    {
+        for(int i = 0; i < inletCount(); i++)
+        {
+            foreach(QDataflowConnection *conn, inlet(i)->connections())
+            {
+                canvas()->removeItem(conn);
+            }
+        }
+        for(int i = 0; i < outletCount(); i++)
+        {
+            foreach(QDataflowConnection *conn, outlet(i)->connections())
+            {
+                canvas()->removeItem(conn);
+            }
+        }
+    }*/
+
+    inputHeader_->setVisible(valid);
+    outputHeader_->setVisible(valid);
+
+    adjust();
+}
+
+bool QDataflowNode::isValid() const
+{
+    return valid_;
+}
+
 QRectF QDataflowNode::boundingRect() const
 {
     return objectBox_->boundingRect()
             .united(inputHeader_->boundingRect())
             .united(outputHeader_->boundingRect());
 }
-
-/*
-QPainterPath QDataflowNode::shape() const
-{
-    QPainterPath path;
-    path.addRect(boundingRect());
-    return path;
-}
-*/
 
 void QDataflowNode::adjust()
 {
@@ -226,8 +376,23 @@ void QDataflowNode::adjust()
     objectBox_->setRect(0, 0, w, r.height());
     outputHeader_->setRect(0, 0, w, ioletHeight());
 
-    foreach(QDataflowConnection *connection, connections_)
-        connection->adjust();
+    QPen pen = objectPen();
+    inputHeader_->setPen(pen);
+    objectBox_->setPen(pen);
+    outputHeader_->setPen(pen);
+
+    QBrush ob = objectBrush(), hb = headerBrush();
+
+    objectBox_->setBrush(ob);
+    outputHeader_->setBrush(hb);
+    inputHeader_->setBrush(hb);
+
+    textItem_->setDefaultTextColor(pen.color());
+
+    inputHeader_->setVisible(isValid());
+    outputHeader_->setVisible(isValid());
+
+    adjustConnections();
 }
 
 qreal QDataflowNode::inletsWidth() const
@@ -240,6 +405,21 @@ qreal QDataflowNode::outletsWidth() const
     return outletCount() * (ioletWidth() + ioletSpacing()) - ioletSpacing();
 }
 
+QPen QDataflowNode::objectPen() const
+{
+    return QPen(isSelected() ? Qt::blue : Qt::black, 1, isValid() ? Qt::SolidLine : Qt::DashLine);
+}
+
+QBrush QDataflowNode::objectBrush() const
+{
+    return Qt::white;
+}
+
+QBrush QDataflowNode::headerBrush() const
+{
+    return Qt::lightGray;
+}
+
 void QDataflowNode::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
     Q_UNUSED(painter);
@@ -248,6 +428,7 @@ void QDataflowNode::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 
 void QDataflowNode::enterEditMode()
 {
+    old_text_ = text();
     setSelected(true);
     textItem_->setFlag(QGraphicsItem::ItemIsFocusable, true);
     textItem_->setTextInteractionFlags(Qt::TextEditable);
@@ -255,8 +436,12 @@ void QDataflowNode::enterEditMode()
     textItem_->setFocus();
 }
 
-void QDataflowNode::exitEditMode()
+void QDataflowNode::exitEditMode(bool revertText)
 {
+    if(revertText)
+        textItem_->setPlainText(old_text_);
+    else
+        canvas()->notifyNodeTextChanged(this);
     textItem_->clearFocus();
     textItem_->setFlag(QGraphicsItem::ItemIsFocusable, false);
     textItem_->setTextInteractionFlags(Qt::NoTextInteraction);
@@ -272,23 +457,15 @@ QVariant QDataflowNode::itemChange(GraphicsItemChange change, const QVariant &va
 {
     switch (change) {
     case ItemPositionHasChanged:
-        foreach(QDataflowConnection *connection, connections_)
-            connection->adjust();
+        adjustConnections();
         break;
     case ItemSelectedHasChanged:
         {
-            bool selected = value.toBool();
-            QPen pen(selected ? Qt::blue : Qt::black);
-            inputHeader_->setPen(pen);
-            objectBox_->setPen(pen);
-            outputHeader_->setPen(pen);
-            textItem_->setDefaultTextColor(pen.color());
-
-            if(!selected)
-                exitEditMode();
-
-            if(selected)
+            adjust();
+            if(value.toBool())
                 canvas()->raiseItem(this);
+            else
+                exitEditMode(false);
         }
         break;
     default:
@@ -315,9 +492,7 @@ void QDataflowNode::keyPressEvent(QKeyEvent *event)
     {
         if(event->key() == Qt::Key_Backspace)
         {
-            foreach(QDataflowConnection *connection, connections_)
-                scene()->removeItem(connection);
-            scene()->removeItem(this);
+            canvas()->removeNode(this);
             event->accept();
             return;
         }
@@ -329,19 +504,42 @@ void QDataflowNode::keyPressEvent(QKeyEvent *event)
     }
 }
 
-QDataflowInlet::QDataflowInlet(QDataflowNode *node, int index)
-    : node_(node), index_(index)
+QDataflowIOlet::QDataflowIOlet(QDataflowNode *node, int index)
+    : canvas_(node->canvas()), node_(node), index_(index)
 {
-    setAcceptDrops(true);
 }
 
-QRectF QDataflowInlet::boundingRect() const
+void QDataflowIOlet::addConnection(QDataflowConnection *connection)
+{
+    connections_ << connection;
+    connection->adjust();
+}
+
+void QDataflowIOlet::removeConnection(QDataflowConnection *connection)
+{
+    connections_.removeAll(connection);
+}
+
+QList<QDataflowConnection*> QDataflowIOlet::connections() const
+{
+    return connections_;
+}
+
+void QDataflowIOlet::adjustConnections() const
+{
+    foreach(QDataflowConnection *conn, connections_)
+    {
+        conn->adjust();
+    }
+}
+
+QRectF QDataflowIOlet::boundingRect() const
 {
     QDataflowNode *n = node();
     return QRectF(-n->ioletWidth() / 2, -n->ioletHeight() / 2, n->ioletWidth(), n->ioletHeight());
 }
 
-void QDataflowInlet::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void QDataflowIOlet::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     Q_UNUSED(option);
     Q_UNUSED(widget);
@@ -349,27 +547,18 @@ void QDataflowInlet::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     painter->fillRect(QRect(-n->ioletWidth() / 2, -n->ioletHeight() / 2, n->ioletWidth(), n->ioletHeight()), Qt::black);
 }
 
+
+QDataflowInlet::QDataflowInlet(QDataflowNode *node, int index)
+    : QDataflowIOlet(node, index)
+{
+}
+
 QDataflowOutlet::QDataflowOutlet(QDataflowNode *node, int index)
-    : node_(node), index_(index), tmp_conn_(0)
+    : QDataflowIOlet(node, index), tmp_conn_(0)
 
 {
     setCursor(Qt::CrossCursor);
     setAcceptedMouseButtons(Qt::LeftButton);
-}
-
-QRectF QDataflowOutlet::boundingRect() const
-{
-    QDataflowNode *n = node();
-    return QRectF(-n->ioletWidth() / 2, -n->ioletHeight() / 2, n->ioletWidth(), n->ioletHeight());
-}
-
-void QDataflowOutlet::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
-{
-    Q_UNUSED(option);
-    Q_UNUSED(widget);
-
-    QDataflowNode *n = node();
-    painter->fillRect(QRect(-n->ioletWidth() / 2, -n->ioletHeight() / 2, n->ioletWidth(), n->ioletHeight()), Qt::black);
 }
 
 void QDataflowOutlet::mousePressEvent(QGraphicsSceneMouseEvent *event)
@@ -398,7 +587,7 @@ void QDataflowOutlet::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     if(QDataflowInlet *inlet = node()->canvas()->itemAtT<QDataflowInlet>(event->scenePos()))
     {
         QDataflowConnection *conn = new QDataflowConnection(this, inlet);
-        node()->canvas()->addItem(conn);
+        node()->canvas()->addConnection(conn);
         node()->canvas()->raiseItem(conn);
     }
 }
@@ -414,15 +603,15 @@ void QDataflowOutlet::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 }
 
 QDataflowConnection::QDataflowConnection(QDataflowOutlet *source, QDataflowInlet *dest)
-    : source_(source), dest_(dest)
+    : canvas_(source->canvas()), source_(source), dest_(dest)
 {
     setFlag(ItemIsSelectable);
     setFlag(ItemIsFocusable);
 
     setAcceptedMouseButtons(Qt::LeftButton);
 
-    source_->node()->addConnection(this);
-    dest_->node()->addConnection(this);
+    source_->addConnection(this);
+    dest_->addConnection(this);
     adjust();
 }
 
@@ -479,9 +668,7 @@ void QDataflowConnection::keyPressEvent(QKeyEvent *event)
 {
     if(event->key() == Qt::Key_Backspace)
     {
-        source()->node()->removeConnection(this);
-        dest()->node()->removeConnection(this);
-        source()->node()->scene()->removeItem(this);
+        canvas()->removeConnection(this);
         event->accept();
     }
     else event->ignore();

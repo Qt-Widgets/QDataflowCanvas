@@ -4,25 +4,45 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    QDataflowCanvas *canvas = new QDataflowCanvas(this);
+    canvas = new QDataflowCanvas(this);
     setCentralWidget(canvas);
 
-    QDataflowNode *node1 = new QDataflowNode(canvas, "node1", 1, 2);
-    node1->setPos(-50, -50);
-    canvas->addItem(node1);
+    QObject::connect(canvas, &QDataflowCanvas::nodeTextChanged, this, &MainWindow::onNodeTextChanged);
+    QObject::connect(canvas, &QDataflowCanvas::nodeAdded, this, &MainWindow::onNodeAdded);
 
-    QDataflowNode *node2 = new QDataflowNode(canvas, "node2", 1, 1);
-    node2->setPos(-50, 0);
-    canvas->addItem(node2);
+    QDataflowNode *node1 = canvas->add(QPoint(-50, -50), "node 1 2");
+    QDataflowNode *node2 = canvas->add(QPoint(-50, 0), "node 1 1");
+    QDataflowNode *node3 = canvas->add(QPoint(50, 0), "node 3 2");
 
-    QDataflowNode *node3 = new QDataflowNode(canvas, "node3", 3, 2);
-    node3->setPos(50, 0);
-    canvas->addItem(node3);
+    canvas->connect(node1, 1, node2, 0);
 
-    canvas->addItem(new QDataflowConnection(node1->outlet(1), node2->inlet(0)));
+    Q_UNUSED(node3);
 }
 
 MainWindow::~MainWindow()
 {
 
+}
+
+void MainWindow::processNode(QDataflowNode *node)
+{
+    QString txt = node->text();
+    QRegExp rx("(\\ |\\t)");
+    QStringList toks = txt.split(rx);
+    bool valid = toks[0] == "node";
+    int numIn = valid && toks.length() >= 2 ? toks[1].toInt() : node->inletCount();
+    int numOut = valid && toks.length() >= 3 ? toks[2].toInt() : node->outletCount();
+    node->setInletCount(numIn);
+    node->setOutletCount(numOut);
+    node->setValid(valid);
+}
+
+void MainWindow::onNodeTextChanged(QDataflowNode *node)
+{
+    processNode(node);
+}
+
+void MainWindow::onNodeAdded(QDataflowNode *node)
+{
+    processNode(node);
 }
