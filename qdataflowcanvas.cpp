@@ -544,7 +544,10 @@ void QDataflowIOlet::adjustConnections() const
 QRectF QDataflowIOlet::boundingRect() const
 {
     QDataflowNode *n = node();
-    return QRectF(-n->ioletWidth() / 2, -n->ioletHeight() / 2, n->ioletWidth(), n->ioletHeight());
+    QRectF r(-n->ioletWidth() / 2, -n->ioletHeight() / 2, n->ioletWidth(), n->ioletHeight());
+    int tolerance = 5;
+    r.adjust(-tolerance, -tolerance, tolerance, tolerance);
+    return r;
 }
 
 void QDataflowIOlet::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
