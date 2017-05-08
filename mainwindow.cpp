@@ -1,14 +1,6 @@
 #include "mainwindow.h"
-#include "qdataflowcanvas.h"
-
 #include <math.h>
-
 #include <QDebug>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-#include <QSpinBox>
-#include <QPushButton>
-#include <QLineEdit>
 
 class DFSource : public QDataflowMetaObject
 {
@@ -34,15 +26,10 @@ public:
         setInletCount(2);
         setOutletCount(1);
 
+        op = args[0];
+
         if(args.length() > 1)
             s = args[1].toLong();
-
-        if(args[0] == "add") op = '+';
-        else if(args[0] == "sub") op = '-';
-        else if(args[0] == "mul") op = '*';
-        else if(args[0] == "div") op = '/';
-        else if(args[0] == "pow") op = '^';
-        else return false;
 
         return true;
     }
@@ -52,11 +39,11 @@ public:
         if(inlet == 0)
         {
             int r = reinterpret_cast<long>(data);
-            if(op == '+') r = r + s;
-            if(op == '-') r = r - s;
-            if(op == '*') r = r * s;
-            if(op == '/') r = r / s;
-            if(op == '^') r = pow(r, s);
+            if(op == "add") r = r + s;
+            if(op == "sub") r = r - s;
+            if(op == "mul") r = r * s;
+            if(op == "div") r = r / s;
+            if(op == "pow") r = pow(r, s);
             outlet(0)->sendData(reinterpret_cast<void*>(r));
         }
         else if(inlet == 1)
@@ -66,8 +53,8 @@ public:
     }
 
 private:
+    QString op;
     int s;
-    QChar op;
 };
 
 class DFSink : public QDataflowMetaObject
@@ -97,48 +84,16 @@ private:
     QLineEdit *e_;
 };
 
-class Completion : public QDataflowTextCompletion
-{
-public:
-    Completion()
-    {
-        classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink";
-    }
-
-    void complete(QString txt, QStringList &completionList)
-    {
-        foreach(QString className, classList)
-        {
-            if(className.startsWith(txt))
-                completionList << className;
-        }
-    }
-
-private:
-    QStringList classList;
-};
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    QVBoxLayout *layout = new QVBoxLayout();
-    QHBoxLayout *hbox = new QHBoxLayout();
-    spinBox = new QSpinBox();
-    hbox->addWidget(spinBox);
-    QPushButton *btnSend = new QPushButton("Send");
-    hbox->addWidget(btnSend);
-    layout->addLayout(hbox);
-    canvas = new QDataflowCanvas(this);
-    canvas->setCompletion(new Completion);
-    layout->addWidget(canvas);
-    txtResult = new QLineEdit();
-    txtResult->setReadOnly(true);
-    layout->addWidget(txtResult);
-    QWidget *w = new QWidget();
-    w->setLayout(layout);
-    setCentralWidget(w);
+    setupUi(this);
 
-    QObject::connect(btnSend, &QPushButton::clicked, this, &MainWindow::processData);
+    classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink";
+
+    canvas->setCompletion(this);
+
+    QObject::connect(sendButton, &QPushButton::clicked, this, &MainWindow::processData);
 
     QObject::connect(canvas, &QDataflowCanvas::nodeTextChanged, this, &MainWindow::onNodeTextChanged);
     QObject::connect(canvas, &QDataflowCanvas::nodeAdded, this, &MainWindow::onNodeAdded);
@@ -153,8 +108,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     canvas->connect(source, 0, add, 0);
     canvas->connect(add, 0, sink, 0);
-
-    sourceNode = source;
 }
 
 MainWindow::~MainWindow()
@@ -162,41 +115,32 @@ MainWindow::~MainWindow()
 
 }
 
+void MainWindow::complete(QString txt, QStringList &completionList)
+{
+    foreach(QString className, classList)
+    {
+        if(className.startsWith(txt))
+            completionList << className;
+    }
+}
+
 void MainWindow::setupNode(QDataflowNode *node)
 {
-    QString txt = node->text();
-    QRegExp rx("(\\ |\\t)");
-    QStringList toks = txt.split(rx);
-
-    if(toks[0] == "source")
-    {
-        node->setMetaObject(new DFSource());
-    }
-    else if(toks[0] == "add" || toks[0] == "sub" || toks[0] == "mul" || toks[0] == "div" || toks[0] == "pow")
-    {
-        node->setMetaObject(new DFMathBinOp());
-    }
-    else if(toks[0] == "sink")
-    {
-        node->setMetaObject(new DFSink(txtResult));
-    }
-    else
+    QStringList toks = node->text().split(QRegExp("(\\ |\\t)"));
+    if(!classList.contains(toks[0]))
     {
         node->setValid(false);
         return;
     }
-    node->setValid(true);
-    if(!node->metaObject()->init(toks))
-    {
-        node->setValid(false);
-        node->setMetaObject(0L);
-        return;
-    }
+    if(toks[0] == "source") {sourceNode = node; node->setMetaObject(new DFSource());}
+    else if(toks[0] == "sink") node->setMetaObject(new DFSink(result));
+    else node->setMetaObject(new DFMathBinOp());
+    node->setValid(node->metaObject()->init(toks));
 }
 
 void MainWindow::processData()
 {
-    long x = spinBox->value();
+    long x = input->value();
     sourceNode->outlet(0)->sendData(reinterpret_cast<void*>(x));
 }
 

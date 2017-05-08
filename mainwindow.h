@@ -1,16 +1,10 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>
+#include "ui_mainwindow.h"
+#include "qdataflowcanvas.h"
 
-class QDataflowCanvas;
-class QDataflowNode;
-class QDataflowConnection;
-
-class QSpinBox;
-class QLineEdit;
-
-class MainWindow : public QMainWindow
+class MainWindow : public QMainWindow, private Ui::MainWindow, public QDataflowTextCompletion
 {
     Q_OBJECT
 
@@ -18,14 +12,15 @@ public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-    void setupNode(QDataflowNode *node);
-    void processData();
+    void complete(QString txt, QStringList &completionList) override;
 
 private:
-    QDataflowCanvas *canvas;
     QDataflowNode *sourceNode;
-    QSpinBox *spinBox;
-    QLineEdit *txtResult;
+    QStringList classList;
+
+private slots:
+    void setupNode(QDataflowNode *node);
+    void processData();
 
 public slots:
     void onNodeTextChanged(QDataflowNode *node);

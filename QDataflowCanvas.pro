@@ -11,3 +11,6 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     qdataflowcanvas.h
+
+FORMS += \
+    mainwindow.ui
