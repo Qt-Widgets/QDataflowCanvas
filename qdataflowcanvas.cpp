@@ -428,7 +428,7 @@ void QDataflowNode::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 
 void QDataflowNode::enterEditMode()
 {
-    old_text_ = text();
+    oldText_ = text();
     setSelected(true);
     textItem_->setFlag(QGraphicsItem::ItemIsFocusable, true);
     textItem_->setTextInteractionFlags(Qt::TextEditable);
@@ -439,7 +439,7 @@ void QDataflowNode::enterEditMode()
 void QDataflowNode::exitEditMode(bool revertText)
 {
     if(revertText)
-        textItem_->setPlainText(old_text_);
+        textItem_->setPlainText(oldText_);
     else
         canvas()->notifyNodeTextChanged(this);
     textItem_->clearFocus();
@@ -554,7 +554,7 @@ QDataflowInlet::QDataflowInlet(QDataflowNode *node, int index)
 }
 
 QDataflowOutlet::QDataflowOutlet(QDataflowNode *node, int index)
-    : QDataflowIOlet(node, index), tmp_conn_(0)
+    : QDataflowIOlet(node, index), tmpConn_(0)
 
 {
     setCursor(Qt::CrossCursor);
@@ -565,12 +565,12 @@ void QDataflowOutlet::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     Q_UNUSED(event);
 
-    tmp_conn_ = new QGraphicsLineItem(this);
-    tmp_conn_->setPos(0, node()->ioletHeight() / 2);
-    tmp_conn_->setZValue(10000);
-    tmp_conn_->setPen(QPen(Qt::red, 1, Qt::DotLine, Qt::RoundCap, Qt::RoundJoin));
-    tmp_conn_->setFlag(ItemStacksBehindParent);
-    node()->canvas()->raiseItem(tmp_conn_);
+    tmpConn_ = new QGraphicsLineItem(this);
+    tmpConn_->setPos(0, node()->ioletHeight() / 2);
+    tmpConn_->setZValue(10000);
+    tmpConn_->setPen(QPen(Qt::red, 1, Qt::DotLine, Qt::RoundCap, Qt::RoundJoin));
+    tmpConn_->setFlag(ItemStacksBehindParent);
+    node()->canvas()->raiseItem(tmpConn_);
     node()->canvas()->raiseItem(node());
 }
 
@@ -580,9 +580,9 @@ void QDataflowOutlet::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
     setCursor(Qt::CrossCursor);
 
-    node()->scene()->removeItem(tmp_conn_);
-    delete tmp_conn_;
-    tmp_conn_ = 0;
+    node()->scene()->removeItem(tmpConn_);
+    delete tmpConn_;
+    tmpConn_ = 0;
 
     if(QDataflowInlet *inlet = node()->canvas()->itemAtT<QDataflowInlet>(event->scenePos()))
     {
@@ -594,11 +594,11 @@ void QDataflowOutlet::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void QDataflowOutlet::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
-    if(tmp_conn_)
+    if(tmpConn_)
     {
-        tmp_conn_->setLine(QLineF(QPointF(), tmp_conn_->mapFromScene(event->scenePos())));
+        tmpConn_->setLine(QLineF(QPointF(), tmpConn_->mapFromScene(event->scenePos())));
         QDataflowInlet *inlet = node()->canvas()->itemAtT<QDataflowInlet>(event->scenePos());
-        tmp_conn_->setPen(QPen(inlet ? Qt::black : Qt::red, 1, inlet ? Qt::SolidLine : Qt::DotLine, Qt::RoundCap, Qt::RoundJoin));
+        tmpConn_->setPen(QPen(inlet ? Qt::black : Qt::red, 1, inlet ? Qt::SolidLine : Qt::DotLine, Qt::RoundCap, Qt::RoundJoin));
     }
 }
 

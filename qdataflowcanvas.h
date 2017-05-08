@@ -127,7 +127,7 @@ private:
     QGraphicsRectItem *outputHeader_;
     QGraphicsTextItem *textItem_;
     bool valid_;
-    QString old_text_;
+    QString oldText_;
 
     friend class QDataflowCanvas;
 };
@@ -190,7 +190,7 @@ protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
 
 private:
-    QGraphicsLineItem *tmp_conn_;
+    QGraphicsLineItem *tmpConn_;
 
     friend class QDataflowCanvas;
     friend class QDataflowNode;
