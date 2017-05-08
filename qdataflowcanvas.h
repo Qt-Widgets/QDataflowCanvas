@@ -14,6 +14,7 @@ class QDataflowOutlet;
 class QDataflowConnection;
 class QDataflowTextCompletion;
 class QDataflowNodeTextLabel;
+class QDataflowMetaObject;
 
 enum QDataflowItemType {
     QDataflowItemTypeNode = QGraphicsItem::UserType + 1,
@@ -94,15 +95,20 @@ public:
     int outletCount() const {return outlets_.size();}
     void setOutletCount(int count, bool skipAdjust = false);
 
-    void adjustConnections() const;
+    QDataflowMetaObject * metaObject() const {return metaObject_;}
+    void setMetaObject(QDataflowMetaObject *metaObject);
 
     int type() const override {return QDataflowItemTypeNode;}
+
+    void onDataReceved(int inlet, void *data);
 
     void setText(QString text);
     QString text() const;
 
     void setValid(bool valid);
     bool isValid() const;
+
+    void adjustConnections() const;
 
     QRectF boundingRect() const override;
 
@@ -142,6 +148,7 @@ private:
     QDataflowNodeTextLabel *textItem_;
     bool valid_;
     QString oldText_;
+    QDataflowMetaObject *metaObject_;
 
     friend class QDataflowCanvas;
 };
@@ -186,6 +193,8 @@ protected:
 public:
     int type() const override {return QDataflowItemTypeInlet;}
 
+    void onDataRecevied(void *data);
+
     friend class QDataflowCanvas;
     friend class QDataflowNode;
 };
@@ -197,6 +206,8 @@ protected:
 
 public:
     int type() const override {return QDataflowItemTypeOutlet;}
+
+    void sendData(void *data);
 
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
@@ -273,6 +284,27 @@ class QDataflowTextCompletion
 {
 public:
     virtual void complete(QString nodeText, QStringList &completionList);
+};
+
+class QDataflowMetaObject
+{
+public:
+    virtual ~QDataflowMetaObject() {}
+
+    virtual bool init(QStringList args);
+    QDataflowNode * node() {return node_;}
+    QDataflowInlet * inlet(int index) {return node_->inlet(index);}
+    QDataflowOutlet * outlet(int index) {return node_->outlet(index);}
+    int inletCount() {return node_->inletCount();}
+    void setInletCount(int c) {node_->setInletCount(c);}
+    int outletCount() {return node_->outletCount();}
+    void setOutletCount(int c) {node_->setOutletCount(c);}
+    virtual void onDataReceved(int inlet, void *data);
+
+private:
+    QDataflowNode *node_;
+
+    friend class QDataflowNode;
 };
 
 template<typename T>

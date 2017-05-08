@@ -16,7 +16,7 @@ QDataflowCanvas::QDataflowCanvas(QWidget *parent)
 {
     QGraphicsScene *scene = new QGraphicsScene(this);
     scene->setItemIndexMethod(QGraphicsScene::NoIndex);
-    scene->setSceneRect(-200, -200, 400, 400);
+    scene->setSceneRect(0, 0, 200, 200);
     setScene(scene);
     setCacheMode(CacheBackground);
     setViewportUpdateMode(BoundingRectViewportUpdate);
@@ -24,7 +24,7 @@ QDataflowCanvas::QDataflowCanvas(QWidget *parent)
     setRenderHint(QPainter::TextAntialiasing, true);
     setTransformationAnchor(AnchorUnderMouse);
     scale(0.75, 0.75);
-    setMinimumSize(400, 400);
+    setMinimumSize(200, 200);
 
     QRadialGradient gradient(0, 0, 800);
     gradient.setColorAt(0, QColor(240,240,240));
@@ -204,7 +204,7 @@ void QDataflowCanvas::itemTextEditorTextChange()
 }
 
 QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlets, int numOutlets, bool valid)
-    : canvas_(canvas), valid_(valid)
+    : canvas_(canvas), valid_(valid), metaObject_(0L)
 {
     setFlag(ItemIsMovable);
     setFlag(ItemSendsGeometryChanges);
@@ -283,16 +283,22 @@ void QDataflowNode::setOutletCount(int count, bool skipAdjust)
         adjust();
 }
 
-void QDataflowNode::adjustConnections() const
+void QDataflowNode::setMetaObject(QDataflowMetaObject *metaObject)
 {
-    foreach(QDataflowInlet *inlet, inlets_)
-    {
-        inlet->adjustConnections();
-    }
+    if(metaObject_)
+        delete metaObject_;
 
-    foreach(QDataflowOutlet *outlet, outlets_)
+    metaObject_ = metaObject;
+
+    if(metaObject_)
+        metaObject_->node_ = this;
+}
+
+void QDataflowNode::onDataReceved(int inlet, void *data)
+{
+    if(metaObject_)
     {
-        outlet->adjustConnections();
+        metaObject_->onDataReceved(inlet, data);
     }
 }
 
@@ -337,6 +343,19 @@ void QDataflowNode::setValid(bool valid)
 bool QDataflowNode::isValid() const
 {
     return valid_;
+}
+
+void QDataflowNode::adjustConnections() const
+{
+    foreach(QDataflowInlet *inlet, inlets_)
+    {
+        inlet->adjustConnections();
+    }
+
+    foreach(QDataflowOutlet *outlet, outlets_)
+    {
+        outlet->adjustConnections();
+    }
 }
 
 QRectF QDataflowNode::boundingRect() const
@@ -542,12 +561,25 @@ QDataflowInlet::QDataflowInlet(QDataflowNode *node, int index)
 {
 }
 
+void QDataflowInlet::onDataRecevied(void *data)
+{
+    node()->onDataReceved(index(), data);
+}
+
 QDataflowOutlet::QDataflowOutlet(QDataflowNode *node, int index)
     : QDataflowIOlet(node, index), tmpConn_(0)
 
 {
     setCursor(Qt::CrossCursor);
     setAcceptedMouseButtons(Qt::LeftButton);
+}
+
+void QDataflowOutlet::sendData(void *data)
+{
+    foreach(QDataflowConnection *conn, connections())
+    {
+        conn->dest()->onDataRecevied(data);
+    }
 }
 
 void QDataflowOutlet::mousePressEvent(QGraphicsSceneMouseEvent *event)
@@ -793,4 +825,17 @@ void QDataflowTextCompletion::complete(QString nodeText, QStringList &completion
 {
     Q_UNUSED(nodeText);
     Q_UNUSED(completionList);
+}
+
+bool QDataflowMetaObject::init(QStringList args)
+{
+    Q_UNUSED(args);
+
+    return true;
+}
+
+void QDataflowMetaObject::onDataReceved(int inlet, void *data)
+{
+    Q_UNUSED(inlet);
+    Q_UNUSED(data);
 }
