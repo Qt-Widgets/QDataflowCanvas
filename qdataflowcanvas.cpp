@@ -6,6 +6,7 @@
 
 #include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
+#include <QGraphicsDropShadowEffect>
 #include <QPainter>
 #include <QStyleOption>
 #include <QApplication>
@@ -215,6 +216,14 @@ QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QString text, int numInlet
     setAcceptedMouseButtons(Qt::LeftButton);
     setAcceptHoverEvents(true);
     setCacheMode(DeviceCoordinateCache);
+
+#if 0
+    QGraphicsDropShadowEffect *shadowFx = new QGraphicsDropShadowEffect();
+    shadowFx->setBlurRadius(2 * ioletHeight());
+    shadowFx->setXOffset(ioletHeight());
+    shadowFx->setYOffset(ioletHeight());
+    setGraphicsEffect(shadowFx);
+#endif
 
     inputHeader_ = new QGraphicsRectItem(this);
 
