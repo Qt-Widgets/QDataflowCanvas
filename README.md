@@ -217,6 +217,7 @@ Note: in the widget, it is possible to create new objects by double clicking on 
 We can use the Model API to create or edit the dataflow graph programatically:
 
 ```C++
+QDataflowModel *model = ...;
 QDataflowModelNode *source = new QDataflowModelNode(model, QPoint(100, 50), "source", 0, 0);
 QDataflowModelNode *add = new QDataflowModelNode(model, QPoint(100, 100), "add 5", 0, 0);
 QDataflowModelNode *sink = new QDataflowModelNode(model, QPoint(100, 150), "sink", 0, 0);
