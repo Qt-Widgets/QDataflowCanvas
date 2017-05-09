@@ -8,13 +8,14 @@
 #include <QMouseEvent>
 #include <QLineEdit>
 
+#include "qdataflowmodel.h"
+
 class QDataflowNode;
 class QDataflowInlet;
 class QDataflowOutlet;
 class QDataflowConnection;
 class QDataflowTextCompletion;
 class QDataflowNodeTextLabel;
-class QDataflowMetaObject;
 
 enum QDataflowItemType {
     QDataflowItemTypeNode = QGraphicsItem::UserType + 1,
@@ -30,45 +31,33 @@ public:
     QDataflowCanvas(QWidget *parent);
     virtual ~QDataflowCanvas();
 
-    QDataflowNode * add(QPoint pos, const QString &txt, int numInlets = 0, int numOutlets = 0);
-    void remove(QDataflowNode *node);
+    QDataflowModel * model();
+    void setModel(QDataflowModel *model);
 
-    void connect(QDataflowNode *source, int outletIndex, QDataflowNode *dest, int inletIndex);
-    void disconnect(QDataflowNode *source, int outletIndex, QDataflowNode *dest, int inletIndex);
+    QDataflowNode * node(QDataflowModelNode *node);
+    QDataflowConnection * connection(QDataflowModelConnection *conn);
 
     QDataflowTextCompletion * completion() const {return completion_;}
     void setCompletion(QDataflowTextCompletion *completion) {completion_ = completion;}
 
-protected:
-    void addNode(QDataflowNode *node);
-    void addConnection(QDataflowConnection *conn);
-    void removeNode(QDataflowNode *node);
-    void removeConnection(QDataflowConnection *conn);
-
-public:
     void raiseItem(QGraphicsItem *item);
 
 protected:
     template<typename T>
     T * itemAtT(const QPointF &point);
 
-    void notifyNodeTextChanged(QDataflowNode *node);
-    void notifyNodeAdded(QDataflowNode *node);
-    void notifyNodeRemoved(QDataflowNode *node);
-    void notifyConnectionAdded(QDataflowConnection *conn);
-    void notifyConnectionRemoved(QDataflowConnection *conn);
-
+protected slots:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
-
-public slots:
     void itemTextEditorTextChange();
-
-signals:
-    void nodeTextChanged(QDataflowNode *node);
-    void nodeAdded(QDataflowNode *node);
-    void nodeRemoved(QDataflowNode *node);
-    void connectionAdded(QDataflowConnection *conn);
-    void connectionRemoved(QDataflowConnection *conn);
+    void onNodeAdded(QDataflowModelNode *mdlnode);
+    void onNodeRemoved(QDataflowModelNode *mdlnode);
+    void onNodeValidChanged(QDataflowModelNode *mdlnode, bool valid);
+    void onNodePosChanged(QDataflowModelNode *mdlnode, QPoint pos);
+    void onNodeTextChanged(QDataflowModelNode *mdlnode, QString text);
+    void onNodeInletCountChanged(QDataflowModelNode *mdlnode, int count);
+    void onNodeOutletCountChanged(QDataflowModelNode *mdlnode, int count);
+    void onConnectionAdded(QDataflowModelConnection *mdlconn);
+    void onConnectionRemoved(QDataflowModelConnection *mdlconn);
 
     friend class QDataflowNode;
     friend class QDataflowIOlet;
@@ -77,17 +66,22 @@ signals:
     friend class QDataflowConnection;
 
 private:
+    QDataflowModel *model_;
     QDataflowTextCompletion *completion_;
     QSet<QDataflowNode*> ownedNodes_;
     QSet<QDataflowConnection*> ownedConnections_;
+    QMap<QDataflowModelNode*, QDataflowNode*> nodes_;
+    QMap<QDataflowModelConnection*, QDataflowConnection*> connections_;
 };
 
 class QDataflowNode : public QGraphicsItem
 {
 protected:
-    QDataflowNode(QDataflowCanvas *canvas_, QString text = "", int numInlets = 0, int numOutlets = 0, bool valid = true);
+    QDataflowNode(QDataflowCanvas *canvas_, QDataflowModelNode *modelNode);
 
 public:
+    QDataflowModelNode * modelNode() const;
+
     QDataflowInlet * inlet(int index) const {return inlets_.at(index);}
     int inletCount() const {return inlets_.size();}
     void setInletCount(int count, bool skipAdjust = false);
@@ -95,12 +89,7 @@ public:
     int outletCount() const {return outlets_.size();}
     void setOutletCount(int count, bool skipAdjust = false);
 
-    QDataflowMetaObject * metaObject() const {return metaObject_;}
-    void setMetaObject(QDataflowMetaObject *metaObject);
-
     int type() const override {return QDataflowItemTypeNode;}
-
-    void onDataReceved(int inlet, void *data);
 
     void setText(QString text);
     QString text() const;
@@ -140,6 +129,7 @@ protected:
 
 private:
     QDataflowCanvas *canvas_;
+    QDataflowModelNode *modelNode_;
     QList<QDataflowInlet*> inlets_;
     QList<QDataflowOutlet*> outlets_;
     QGraphicsRectItem *inputHeader_;
@@ -148,7 +138,6 @@ private:
     QDataflowNodeTextLabel *textItem_;
     bool valid_;
     QString oldText_;
-    QDataflowMetaObject *metaObject_;
 
     friend class QDataflowCanvas;
 };
@@ -207,8 +196,6 @@ protected:
 public:
     int type() const override {return QDataflowItemTypeOutlet;}
 
-    void sendData(void *data);
-
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
@@ -224,7 +211,7 @@ private:
 class QDataflowConnection : public QGraphicsItem
 {
 protected:
-    QDataflowConnection(QDataflowOutlet *source, QDataflowInlet *dest);
+    QDataflowConnection(QDataflowCanvas *canvas, QDataflowModelConnection *modelConnection);
 
 public:
     QDataflowOutlet * source() const {return source_;}
@@ -246,6 +233,7 @@ protected:
 
 private:
     QDataflowCanvas *canvas_;
+    QDataflowModelConnection *modelConnection_;
     QDataflowOutlet *source_;
     QDataflowInlet *dest_;
     QPointF sourcePoint_;
@@ -284,27 +272,6 @@ class QDataflowTextCompletion
 {
 public:
     virtual void complete(QString nodeText, QStringList &completionList);
-};
-
-class QDataflowMetaObject
-{
-public:
-    virtual ~QDataflowMetaObject() {}
-
-    virtual bool init(QStringList args);
-    QDataflowNode * node() {return node_;}
-    QDataflowInlet * inlet(int index) {return node_->inlet(index);}
-    QDataflowOutlet * outlet(int index) {return node_->outlet(index);}
-    int inletCount() {return node_->inletCount();}
-    void setInletCount(int c) {node_->setInletCount(c);}
-    int outletCount() {return node_->outletCount();}
-    void setOutletCount(int c) {node_->setOutletCount(c);}
-    virtual void onDataReceved(int inlet, void *data);
-
-private:
-    QDataflowNode *node_;
-
-    friend class QDataflowNode;
 };
 
 template<typename T>

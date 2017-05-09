@@ -44,7 +44,7 @@ public:
             if(op == "mul") r = r * s;
             if(op == "div") r = r / s;
             if(op == "pow") r = pow(r, s);
-            outlet(0)->sendData(reinterpret_cast<void*>(r));
+            sendData(0, reinterpret_cast<void*>(r));
         }
         else if(inlet == 1)
         {
@@ -92,16 +92,23 @@ MainWindow::MainWindow(QWidget *parent)
     classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink";
     canvas->setCompletion(this);
 
+    QDataflowModel *model = canvas->model();
+
+    new QDataflowModelDebugSignals(model);
+
     QObject::connect(sendButton, &QPushButton::clicked, this, &MainWindow::processData);
-    QObject::connect(canvas, &QDataflowCanvas::nodeTextChanged, this, &MainWindow::onNodeTextChanged);
-    QObject::connect(canvas, &QDataflowCanvas::nodeAdded, this, &MainWindow::onNodeAdded);
+    QObject::connect(model, &QDataflowModel::nodeTextChanged, this, &MainWindow::onNodeTextChanged);
+    QObject::connect(model, &QDataflowModel::nodeAdded, this, &MainWindow::onNodeAdded);
 
     // set up a small dataflow graph:
-    QDataflowNode *source = canvas->add(QPoint(100, 50), "source");
-    QDataflowNode *add = canvas->add(QPoint(100, 100), "add 5");
-    QDataflowNode *sink = canvas->add(QPoint(100, 150), "sink");
-    canvas->connect(source, 0, add, 0);
-    canvas->connect(add, 0, sink, 0);
+    QDataflowModelNode *source = new QDataflowModelNode(model, QPoint(100, 50), "source", 0, 0);
+    QDataflowModelNode *add = new QDataflowModelNode(model, QPoint(100, 100), "add 5", 0, 0);
+    QDataflowModelNode *sink = new QDataflowModelNode(model, QPoint(100, 150), "sink", 0, 0);
+    model->addNode(source);
+    model->addNode(add);
+    model->addNode(sink);
+    model->addConnection(source->outlet(0), add->inlet(0));
+    model->addConnection(add->outlet(0), sink->inlet(0));
 }
 
 MainWindow::~MainWindow()
@@ -116,7 +123,7 @@ void MainWindow::complete(QString txt, QStringList &completionList)
             completionList << className;
 }
 
-void MainWindow::setupNode(QDataflowNode *node)
+void MainWindow::setupNode(QDataflowModelNode *node)
 {
     QStringList toks = node->text().split(QRegExp("(\\ |\\t)"));
     if(!classList.contains(toks[0]))
@@ -124,24 +131,30 @@ void MainWindow::setupNode(QDataflowNode *node)
         node->setValid(false);
         return;
     }
-    if(toks[0] == "source") {sourceNode = node; node->setMetaObject(new DFSource());}
-    else if(toks[0] == "sink") node->setMetaObject(new DFSink(result));
-    else node->setMetaObject(new DFMathBinOp());
-    node->setValid(node->metaObject()->init(toks));
+    if(toks[0] == "source") {sourceNode = node; node->setDataflowMetaObject(new DFSource());}
+    else if(toks[0] == "sink") node->setDataflowMetaObject(new DFSink(result));
+    else node->setDataflowMetaObject(new DFMathBinOp());
+    bool ok = node->dataflowMetaObject()->init(toks);
+    if(!ok)
+    {
+        qDebug() << "initialization failed for:" << node->text();
+    }
+    node->setValid(ok);
 }
 
 void MainWindow::processData()
 {
     long x = input->value();
-    sourceNode->outlet(0)->sendData(reinterpret_cast<void*>(x));
+    sourceNode->dataflowMetaObject()->sendData(0, reinterpret_cast<void*>(x));
 }
 
-void MainWindow::onNodeTextChanged(QDataflowNode *node)
+void MainWindow::onNodeAdded(QDataflowModelNode *node)
 {
     setupNode(node);
 }
 
-void MainWindow::onNodeAdded(QDataflowNode *node)
+void MainWindow::onNodeTextChanged(QDataflowModelNode *node, QString text)
 {
+    Q_UNUSED(text);
     setupNode(node);
 }

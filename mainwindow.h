@@ -15,14 +15,14 @@ public:
     void complete(QString txt, QStringList &completionList) override;
 
 private:
-    QDataflowNode *sourceNode;
+    QDataflowModelNode *sourceNode;
     QStringList classList;
 
 private slots:
-    void setupNode(QDataflowNode *node);
+    void setupNode(QDataflowModelNode *node);
     void processData();
-    void onNodeTextChanged(QDataflowNode *node);
-    void onNodeAdded(QDataflowNode *node);
+    void onNodeAdded(QDataflowModelNode *node);
+    void onNodeTextChanged(QDataflowModelNode *node, QString text);
 };
 
 #endif // MAINWINDOW_H
