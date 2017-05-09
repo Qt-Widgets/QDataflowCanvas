@@ -146,22 +146,7 @@ void MainWindow::processData()
 }
 ```
 
-And now proceed to the creation of the `QDataflowCanvas`:
-
-```C++
-QDataflowCanvas *canvas = new QDataflowCanvas(mainWindow);
-```
-
-initialize completion:
-
-```C++
-QStringList classList;
-classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink";
-canvas->setCompletion(this);
-```
-
-where `this` inherits also from `QDataflowTextCompletion` and implements the `void complete(QString txt, QStringList &list)` method:
-
+Also, a method for performing text completion:
 ```C++
 void MainWindow::complete(QString txt, QStringList &completionList)
 {
@@ -171,15 +156,7 @@ void MainWindow::complete(QString txt, QStringList &completionList)
 }
 ```
 
-and connect signals:
-
-```C++
-QObject::connect(sendButton, &QPushButton::clicked, this, &MainWindow::processData);
-QObject::connect(model, &QDataflowModel::nodeTextChanged, this, &MainWindow::onNodeTextChanged);
-QObject::connect(model, &QDataflowModel::nodeAdded, this, &MainWindow::onNodeAdded);
-```
-
-when a node is created or changed, `void setupNode(QDataflowModelNode *node)` is called (again):
+And slots for when a node is added or modified in the model:
 
 ```C++
 void MainWindow::onNodeAdded(QDataflowModelNode *node)
@@ -194,9 +171,48 @@ void MainWindow::onNodeTextChanged(QDataflowModelNode *node, QString text)
 }
 ```
 
+Now proceed to the creation of the `QDataflowCanvas`:
+
+```C++
+QDataflowCanvas *canvas = new QDataflowCanvas(mainWindow);
+```
+
+initialize completion:
+
+```C++
+QStringList classList;
+classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink";
+canvas->setCompletion(this);
+```
+
+where `this` inherits also from `QDataflowTextCompletion` and implements the `void complete(QString txt, QStringList &list)` method.
+
+Connect signals:
+
+```C++
+QObject::connect(sendButton, &QPushButton::clicked, this, &MainWindow::processData);
+QObject::connect(model, &QDataflowModel::nodeTextChanged, this, &MainWindow::onNodeTextChanged);
+QObject::connect(model, &QDataflowModel::nodeAdded, this, &MainWindow::onNodeAdded);
+```
+
 See mainwindow.ui/h/cpp for a complete example.
 
 Note: in the widget, it is possible to create new objects by double clicking on an empty area, or edit existing objects by double clicking objects. Objects and connections can be removed by selecting them and hitting backspace. Connections are created by dragging from outlet to inlet.
 
+# Using the Model API
 
+We can use the Model API to create or edit the dataflow graph programatically:
+
+```C++
+QDataflowModelNode *source = new QDataflowModelNode(model, QPoint(100, 50), "source", 0, 0);
+QDataflowModelNode *add = new QDataflowModelNode(model, QPoint(100, 100), "add 5", 0, 0);
+QDataflowModelNode *sink = new QDataflowModelNode(model, QPoint(100, 150), "sink", 0, 0);
+model->addNode(source);
+model->addNode(add);
+model->addNode(sink);
+model->addConnection(source->outlet(0), add->inlet(0));
+model->addConnection(add->outlet(0), sink->inlet(0));
+```
+
+The model will emit signals for when a node/connection is added, removed, and also when a node change its validity status, position, text, inlet count, and outlet count.
 
