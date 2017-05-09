@@ -8,7 +8,7 @@ It is based on the [Graphics View Framework](http://doc.qt.io/qt-5/graphicsview.
 
 ![screenshot](/screenshot.png?raw=true)
 
-Start by creating a UI with a QSpinBox and a QPushButton which will be used to send input to one of the nodes (the `source` object). Create also a disabled QLineEdit which will be used to display the data received by the `sink` object.
+Start by creating a UI with a QSpinBox and a QPushButton which will be used to send input to one of the nodes (the `source` object). Create also a read-only QLineEdit which will be used to display the data received by the `sink` object.
 
 The `dataflowMetaObject` is a volatile field used to attach the dataflow logic to the graph.
 
