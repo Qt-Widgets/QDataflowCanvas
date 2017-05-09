@@ -196,4 +196,7 @@ void MainWindow::onNodeTextChanged(QDataflowModelNode *node, QString text)
 
 See mainwindow.ui/h/cpp for a complete example.
 
+Note: in the widget, it is possible to create new objects by double clicking on an empty area, or edit existing objects by double clicking objects. Objects and connections can be removed by selecting them and hitting backspace. Connections are created by dragging from outlet to inlet.
+
+
 
