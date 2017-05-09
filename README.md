@@ -124,9 +124,22 @@ classList is a `QStringList` with all the available dataflow object classes. It 
         node->setValid(false);
         return;
     }
-    if(toks[0] == "source") {sourceNode = node; node->setDataflowMetaObject(new DFSource());}
-    else if(toks[0] == "sink") node->setDataflowMetaObject(new DFSink(result));
-    else node->setDataflowMetaObject(new DFMathBinOp());
+    if(toks[0] == "source")
+    {
+        sourceNode = node;
+```
+we track the last `source` node, so we have an object to call `sendData()` when the QPushButton is clicked.
+```C++
+        node->setDataflowMetaObject(new DFSource());
+    }
+    else if(toks[0] == "sink")
+    {
+        node->setDataflowMetaObject(new DFSink(result));
+    }
+    else
+    {
+        node->setDataflowMetaObject(new DFMathBinOp());
+    }
     bool ok = node->dataflowMetaObject()->init(toks);
     if(!ok)
     {
