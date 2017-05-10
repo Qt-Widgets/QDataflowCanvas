@@ -2,9 +2,9 @@
 
 A Qt widget for displaying and editing a dataflow graph.
 
-It is based on the [Graphics View Framework](http://doc.qt.io/qt-5/graphicsview.html) of [Qt](https://www.qt.io), and it used the [Model/View architecture](http://doc.qt.io/qt-5/model-view-programming.html).
+It is based on the [Graphics View Framework](http://doc.qt.io/qt-5/graphicsview.html) and it uses the [Model/View architecture](http://doc.qt.io/qt-5/model-view-programming.html).
 
-# Building a Dataflow application
+# Building a simple Dataflow application
 
 ![screenshot](/screenshot.png?raw=true)
 
