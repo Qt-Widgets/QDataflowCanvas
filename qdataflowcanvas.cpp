@@ -275,6 +275,12 @@ QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QDataflowModelNode *modelN
 
     QObject::connect(textItem_->document(), &QTextDocument::contentsChanged, canvas, &QDataflowCanvas::itemTextEditorTextChange);
 
+    setAcceptTouchEvents(false);
+    inputHeader_->setAcceptTouchEvents(false);
+    objectBox_->setAcceptTouchEvents(false);
+    outputHeader_->setAcceptTouchEvents(false);
+    textItem_->setAcceptTouchEvents(false);
+
     setInletCount(modelNode->inletCount(), true);
     setOutletCount(modelNode->outletCount(), true);
 
@@ -305,6 +311,7 @@ void QDataflowNode::setInletCount(int count, bool skipAdjust)
         int i = inlets_.length();
         QDataflowInlet *inlet = new QDataflowInlet(this, i);
         inlet->setParentItem(inputHeader_);
+        inlet->setAcceptTouchEvents(false);
         inlet->setPos(ioletWidth() / 2 + i * (ioletWidth() + ioletSpacing()), ioletHeight() / 2);
         inlets_.push_back(inlet);
     }
@@ -330,6 +337,7 @@ void QDataflowNode::setOutletCount(int count, bool skipAdjust)
         int i = outlets_.length();
         QDataflowOutlet *outlet = new QDataflowOutlet(this, i);
         outlet->setParentItem(outputHeader_);
+        outlet->setAcceptTouchEvents(false);
         outlet->setPos(ioletWidth() / 2 + i * (ioletWidth() + ioletSpacing()), ioletHeight() / 2);
         outlets_.push_back(outlet);
     }
