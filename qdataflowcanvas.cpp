@@ -449,7 +449,7 @@ void QDataflowNode::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     bool sel = option->state & QStyle::State_Selected,
             hov = option->state & QStyle::State_MouseOver;
 
-    if(hov)
+    if(sel || hov)
     {
         painter->fillRect(boundingRect(), sel ? Qt::cyan : Qt::gray);
     }
@@ -709,7 +709,7 @@ void QDataflowConnection::paint(QPainter *painter, const QStyleOptionGraphicsIte
     bool sel = option->state & QStyle::State_Selected,
             hov = option->state & QStyle::State_MouseOver;
 
-    if(hov)
+    if(sel || hov)
     {
         painter->fillPath(shape(), sel ? Qt::cyan : Qt::gray);
     }
