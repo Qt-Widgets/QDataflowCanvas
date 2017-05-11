@@ -275,11 +275,19 @@ void QDataflowModelNode::removeLastInlet()
 
 void QDataflowModelNode::setInletCount(int count)
 {
+    if(inletCount() == count) return;
+
+    bool shouldBlockSignals = blockSignals(true);
+
     while(inletCount() < count)
         addInlet();
 
     while(inletCount() > count)
         removeLastInlet();
+
+    blockSignals(shouldBlockSignals);
+
+    emit inletCountChanged(count);
 }
 
 void QDataflowModelNode::addOutlet()
@@ -299,11 +307,19 @@ void QDataflowModelNode::removeLastOutlet()
 
 void QDataflowModelNode::setOutletCount(int count)
 {
+    if(outletCount() == count) return;
+
+    bool shouldBlockSignals = blockSignals(true);
+
     while(outletCount() < count)
         addOutlet();
 
     while(outletCount() > count)
         removeLastOutlet();
+
+    blockSignals(shouldBlockSignals);
+
+    emit outletCountChanged(count);
 }
 
 void QDataflowModelNode::addInlet(QDataflowModelInlet *inlet)
