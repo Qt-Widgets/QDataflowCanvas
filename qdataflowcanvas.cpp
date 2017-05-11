@@ -352,24 +352,6 @@ void QDataflowNode::setValid(bool valid)
 {
     valid_ = valid;
 
-    /*if(!valid)
-    {
-        for(int i = 0; i < inletCount(); i++)
-        {
-            foreach(QDataflowConnection *conn, inlet(i)->connections())
-            {
-                canvas()->removeItem(conn);
-            }
-        }
-        for(int i = 0; i < outletCount(); i++)
-        {
-            foreach(QDataflowConnection *conn, outlet(i)->connections())
-            {
-                canvas()->removeItem(conn);
-            }
-        }
-    }*/
-
     inputHeader_->setVisible(valid);
     outputHeader_->setVisible(valid);
 
