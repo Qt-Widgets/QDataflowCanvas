@@ -135,7 +135,7 @@ MainWindow::~MainWindow()
 void MainWindow::complete(QString txt, QStringList &completionList)
 {
     foreach(QString className, classList)
-        if(className.startsWith(txt))
+        if(className.startsWith(txt) && className.length() > txt.length())
             completionList << className;
 }
 

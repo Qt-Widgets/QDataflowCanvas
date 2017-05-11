@@ -53,6 +53,9 @@ public:
     QDataflowNode * node(QDataflowModelNode *node);
     QDataflowConnection * connection(QDataflowModelConnection *conn);
 
+    QList<QDataflowNode*> selectedNodes();
+    QList<QDataflowConnection*> selectedConnections();
+
     QDataflowTextCompletion * completion() const {return completion_;}
     void setCompletion(QDataflowTextCompletion *completion) {completion_ = completion;}
 
@@ -229,6 +232,8 @@ protected:
     QDataflowConnection(QDataflowCanvas *canvas, QDataflowModelConnection *modelConnection);
 
 public:
+    QDataflowModelConnection * modelConnection() const;
+
     QDataflowOutlet * source() const {return source_;}
     QDataflowInlet * dest() const {return dest_;}
 
@@ -243,8 +248,6 @@ protected:
     QPainterPath shape() const override;
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
-
-    void keyPressEvent(QKeyEvent *event) override;
 
 private:
     QDataflowCanvas *canvas_;

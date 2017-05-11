@@ -102,6 +102,28 @@ void QDataflowCanvas::setModel(QDataflowModel *model)
     QObject::connect(model_, &QDataflowModel::connectionRemoved, this, &QDataflowCanvas::onConnectionRemoved);
 }
 
+QList<QDataflowNode*> QDataflowCanvas::selectedNodes()
+{
+    QList<QDataflowNode*> ret;
+    foreach(QDataflowNode *node, nodes_)
+    {
+        if(node->scene() == scene() && node->isSelected())
+            ret.push_back(node);
+    }
+    return ret;
+}
+
+QList<QDataflowConnection*> QDataflowCanvas::selectedConnections()
+{
+    QList<QDataflowConnection*> ret;
+    foreach(QDataflowConnection *conn, connections_)
+    {
+        if(conn->scene() == scene() && conn->isSelected())
+            ret.push_back(conn);
+    }
+    return ret;
+}
+
 QDataflowNode * QDataflowCanvas::node(QDataflowModelNode *node)
 {
     QMap<QDataflowModelNode*, QDataflowNode*>::Iterator it = nodes_.find(node);
@@ -173,19 +195,23 @@ void QDataflowCanvas::keyPressEvent(QKeyEvent *event)
 
     if(event->key() == Qt::Key_Backspace)
     {
-        QList<QDataflowModelNode*> toRemove;
-        bool someItemInEditMode = false;
+        bool editing = false;
 
-        foreach(QDataflowNode *node, nodes_)
+        foreach(QDataflowNode *node, selectedNodes())
         {
-            if(node->isSelected()) toRemove.push_back(node->modelNode());
-            if(node->isInEditMode()) someItemInEditMode = true;
+            if(node->isInEditMode())
+            {
+                editing = true;
+                break;
+            }
         }
 
-        if(!toRemove.isEmpty() && !someItemInEditMode)
+        if(!editing)
         {
-            foreach(QDataflowModelNode *node, toRemove)
-                model()->removeNode(node);
+            foreach(QDataflowConnection *conn, selectedConnections())
+                model()->removeConnection(conn->modelConnection());
+            foreach(QDataflowNode *node, selectedNodes())
+                model()->removeNode(node->modelNode());
             event->accept();
         }
     }
@@ -224,6 +250,8 @@ void QDataflowCanvas::onNodeAdded(QDataflowModelNode *mdlnode)
 void QDataflowCanvas::onNodeRemoved(QDataflowModelNode *mdlnode)
 {
     QDataflowNode *uinode = node(mdlnode);
+    if(uinode->isInEditMode())
+        uinode->exitEditMode(true);
     scene()->removeItem(uinode);
 }
 
@@ -676,6 +704,11 @@ QDataflowConnection::QDataflowConnection(QDataflowCanvas *canvas, QDataflowModel
     adjust();
 }
 
+QDataflowModelConnection * QDataflowConnection::modelConnection() const
+{
+    return modelConnection_;
+}
+
 void QDataflowConnection::adjust()
 {
     if(!source_ || !dest_)
@@ -734,16 +767,6 @@ void QDataflowConnection::paint(QPainter *painter, const QStyleOptionGraphicsIte
 
     painter->setPen(QPen(sel ? Qt::blue : Qt::black, 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter->drawLine(line);
-}
-
-void QDataflowConnection::keyPressEvent(QKeyEvent *event)
-{
-    if(event->key() == Qt::Key_Backspace)
-    {
-        canvas()->model()->removeConnection(modelConnection_);
-        event->accept();
-    }
-    else event->ignore();
 }
 
 QDataflowNodeTextLabel::QDataflowNodeTextLabel(QDataflowNode *node, QGraphicsItem *parent)
