@@ -64,6 +64,7 @@ protected:
 
 protected slots:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
     void itemTextEditorTextChange();
     void onNodeAdded(QDataflowModelNode *mdlnode);
     void onNodeRemoved(QDataflowModelNode *mdlnode);
@@ -140,8 +141,6 @@ protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
-
-    void keyPressEvent(QKeyEvent *event) override;
 
 private:
     QDataflowCanvas *canvas_;

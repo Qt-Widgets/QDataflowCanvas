@@ -167,6 +167,32 @@ void QDataflowCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     QGraphicsView::mouseDoubleClickEvent(event);
 }
 
+void QDataflowCanvas::keyPressEvent(QKeyEvent *event)
+{
+    event->ignore();
+
+    if(event->key() == Qt::Key_Backspace)
+    {
+        QList<QDataflowModelNode*> toRemove;
+        bool someItemInEditMode = false;
+
+        foreach(QDataflowNode *node, nodes_)
+        {
+            if(node->isSelected()) toRemove.push_back(node->modelNode());
+            if(node->isInEditMode()) someItemInEditMode = true;
+        }
+
+        if(!toRemove.isEmpty() && !someItemInEditMode)
+        {
+            foreach(QDataflowModelNode *node, toRemove)
+                model()->removeNode(node);
+            event->accept();
+        }
+    }
+
+    QGraphicsView::keyPressEvent(event);
+}
+
 void QDataflowCanvas::itemTextEditorTextChange()
 {
     QObject *senderParent = sender()->parent();
@@ -251,7 +277,6 @@ QDataflowNode::QDataflowNode(QDataflowCanvas *canvas, QDataflowModelNode *modelN
     setFlag(ItemIsMovable);
     setFlag(ItemSendsGeometryChanges);
     setFlag(ItemIsSelectable);
-    setFlag(ItemIsFocusable);
     setAcceptedMouseButtons(Qt::LeftButton);
     setAcceptHoverEvents(true);
     setCacheMode(DeviceCoordinateCache);
@@ -471,6 +496,10 @@ void QDataflowNode::enterEditMode()
     textItem_->setTextInteractionFlags(Qt::TextEditable);
     //textItem_->setTextInteractionFlags(Qt::TextEditorInteraction);
     textItem_->setFocus();
+    QTextCursor cursor = textItem_->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    cursor.select(QTextCursor::Document);
+    textItem_->setTextCursor(cursor);
     textItem_->complete();
 }
 
@@ -526,24 +555,6 @@ void QDataflowNode::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
     }
     event->ignore();
     QGraphicsItem::mouseDoubleClickEvent(event);
-}
-
-void QDataflowNode::keyPressEvent(QKeyEvent *event)
-{
-    if(!isInEditMode())
-    {
-        if(event->key() == Qt::Key_Backspace)
-        {
-            canvas()->model()->removeNode(modelNode_);
-            event->accept();
-            return;
-        }
-        else
-        {
-            event->ignore();
-            return;
-        }
-    }
 }
 
 QDataflowIOlet::QDataflowIOlet(QDataflowNode *node, int index)
@@ -653,7 +664,6 @@ QDataflowConnection::QDataflowConnection(QDataflowCanvas *canvas, QDataflowModel
     : canvas_(canvas), modelConnection_(modelConnection)
 {
     setFlag(ItemIsSelectable);
-    setFlag(ItemIsFocusable);
     setAcceptedMouseButtons(Qt::LeftButton);
     setAcceptHoverEvents(true);
 
@@ -825,11 +835,21 @@ void QDataflowNodeTextLabel::clearCompletion()
 
 void QDataflowNodeTextLabel::acceptCompletion()
 {
-    if(completionActive_ && completionIndex_ >= 0)
+    if(completionActive_)
     {
-        document()->setPlainText(completionItems_[completionIndex_]->text());
+        if(completionIndex_ >= 0)
+        {
+            document()->setPlainText(completionItems_[completionIndex_]->text());
+        }
+        else
+        {
+            node_->exitEditMode(false);
+        }
     }
-    clearCompletion();
+    else
+    {
+        clearCompletion();
+    }
 }
 
 void QDataflowNodeTextLabel::cycleCompletion(int d)
