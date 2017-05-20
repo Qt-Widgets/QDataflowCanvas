@@ -124,13 +124,23 @@ QList<QDataflowConnection*> QDataflowCanvas::selectedConnections()
     return ret;
 }
 
+bool QDataflowCanvas::isSomeNodeInEditMode()
+{
+    foreach(QDataflowNode *node, nodes_)
+    {
+        if(node->scene() == scene() && node->isInEditMode())
+            return true;
+    }
+    return false;
+}
+
 QDataflowNode * QDataflowCanvas::node(QDataflowModelNode *node)
 {
     QMap<QDataflowModelNode*, QDataflowNode*>::Iterator it = nodes_.find(node);
     if(it == nodes_.end())
     {
         qDebug() << "WARNING:" << this << "does not know about" << node;
-        return nullptr;
+        return 0L;
     }
     return *it;
 }
@@ -141,7 +151,7 @@ QDataflowConnection * QDataflowCanvas::connection(QDataflowModelConnection *conn
     if(it == connections_.end())
     {
         qDebug() << "WARNING:" << this << "does not know about" << conn;
-        return nullptr;
+        return 0L;
     }
     return *it;
 }
@@ -193,27 +203,13 @@ void QDataflowCanvas::keyPressEvent(QKeyEvent *event)
 {
     event->ignore();
 
-    if(event->key() == Qt::Key_Backspace)
+    if(event->key() == Qt::Key_Backspace && !isSomeNodeInEditMode())
     {
-        bool editing = false;
-
+        foreach(QDataflowConnection *conn, selectedConnections())
+            model()->removeConnection(conn->modelConnection());
         foreach(QDataflowNode *node, selectedNodes())
-        {
-            if(node->isInEditMode())
-            {
-                editing = true;
-                break;
-            }
-        }
-
-        if(!editing)
-        {
-            foreach(QDataflowConnection *conn, selectedConnections())
-                model()->removeConnection(conn->modelConnection());
-            foreach(QDataflowNode *node, selectedNodes())
-                model()->removeNode(node->modelNode());
-            event->accept();
-        }
+            model()->removeNode(node->modelNode());
+        event->accept();
     }
 
     QGraphicsView::keyPressEvent(event);
@@ -638,7 +634,7 @@ QDataflowInlet::QDataflowInlet(QDataflowNode *node, int index)
 }
 
 QDataflowOutlet::QDataflowOutlet(QDataflowNode *node, int index)
-    : QDataflowIOlet(node, index), tmpConn_(nullptr)
+    : QDataflowIOlet(node, index), tmpConn_(0L)
 
 {
     setCursor(Qt::CrossCursor);
