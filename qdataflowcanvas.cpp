@@ -29,7 +29,7 @@
 #include <QTextDocument>
 
 QDataflowCanvas::QDataflowCanvas(QWidget *parent)
-    : QGraphicsView(parent), model_(nullptr)
+    : QGraphicsView(parent), model_(0L)
 {
     QGraphicsScene *scene = new QGraphicsScene(this);
     scene->setItemIndexMethod(QGraphicsScene::NoIndex);
