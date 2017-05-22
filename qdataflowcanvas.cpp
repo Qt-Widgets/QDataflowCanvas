@@ -535,6 +535,9 @@ void QDataflowNode::exitEditMode(bool revertText)
     else if(oldText_ != text())
         modelNode_->setText(text());
     textItem_->clearFocus();
+    QTextCursor cursor = textItem_->textCursor();
+    cursor.clearSelection();
+    textItem_->setTextCursor(cursor);
     textItem_->setFlag(QGraphicsItem::ItemIsFocusable, false);
     textItem_->setTextInteractionFlags(Qt::NoTextInteraction);
 }
