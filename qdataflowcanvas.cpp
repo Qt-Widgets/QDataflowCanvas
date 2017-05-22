@@ -533,7 +533,10 @@ void QDataflowNode::exitEditMode(bool revertText)
     if(revertText)
         textItem_->setPlainText(oldText_);
     else if(oldText_ != text())
+    {
         modelNode_->setText(text());
+        oldText_ = text();
+    }
     textItem_->clearFocus();
     QTextCursor cursor = textItem_->textCursor();
     cursor.clearSelection();
