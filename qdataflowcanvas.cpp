@@ -397,6 +397,8 @@ void QDataflowNode::setOutletCount(int count, bool skipAdjust)
 
 void QDataflowNode::setText(QString text)
 {
+    if(text == this->text()) return;
+
     textItem_->setPlainText(text);
 }
 
