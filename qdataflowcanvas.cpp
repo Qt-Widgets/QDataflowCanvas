@@ -261,7 +261,9 @@ void QDataflowCanvas::onNodeValidChanged(QDataflowModelNode *mdlnode, bool valid
 void QDataflowCanvas::onNodePosChanged(QDataflowModelNode *mdlnode, QPoint pos)
 {
     QDataflowNode *uinode = node(mdlnode);
-    uinode->setPos(pos);
+    // XXX: in the first ItemPositionChanged event mdlnode is not yet mapped to a QDataflowNode
+    if(uinode)
+        uinode->setPos(pos);
 }
 
 void QDataflowCanvas::onNodeTextChanged(QDataflowModelNode *mdlnode, QString text)
@@ -559,6 +561,7 @@ QVariant QDataflowNode::itemChange(GraphicsItemChange change, const QVariant &va
     switch (change) {
     case ItemPositionHasChanged:
         adjustConnections();
+        modelNode_->setPos(QPoint(pos().x(), pos().y()));
         break;
     case ItemSelectedHasChanged:
         {
