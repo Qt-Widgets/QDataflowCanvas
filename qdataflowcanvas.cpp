@@ -520,8 +520,8 @@ void QDataflowNode::enterEditMode()
     oldText_ = text();
     setSelected(true);
     textItem_->setFlag(QGraphicsItem::ItemIsFocusable, true);
-    textItem_->setTextInteractionFlags(Qt::TextEditable);
-    //textItem_->setTextInteractionFlags(Qt::TextEditorInteraction);
+    //textItem_->setTextInteractionFlags(Qt::TextEditable);
+    textItem_->setTextInteractionFlags(Qt::TextEditorInteraction);
     textItem_->setFocus();
     QTextCursor cursor = textItem_->textCursor();
     cursor.movePosition(QTextCursor::End);
