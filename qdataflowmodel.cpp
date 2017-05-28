@@ -100,6 +100,16 @@ void QDataflowModel::disconnect(QDataflowModelNode *sourceNode, int sourceOutlet
     }
 }
 
+QSet<QDataflowModelNode*> QDataflowModel::nodes()
+{
+    return nodes_;
+}
+
+QSet<QDataflowModelConnection*> QDataflowModel::connections()
+{
+    return connections_;
+}
+
 void QDataflowModel::addConnection(QDataflowModelConnection *conn)
 {
     if(!conn) return;

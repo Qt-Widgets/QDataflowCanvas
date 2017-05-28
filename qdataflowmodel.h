@@ -49,6 +49,9 @@ public:
     virtual void disconnect(QDataflowModelConnection *conn);
     virtual void disconnect(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet);
 
+    QSet<QDataflowModelNode*> nodes();
+    QSet<QDataflowModelConnection*> connections();
+
 protected:
     virtual void addConnection(QDataflowModelConnection *conn);
     virtual void removeConnection(QDataflowModelConnection *conn);
