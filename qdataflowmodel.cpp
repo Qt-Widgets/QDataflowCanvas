@@ -478,13 +478,6 @@ QDataflowMetaObject::QDataflowMetaObject()
 {
 }
 
-bool QDataflowMetaObject::init(QStringList args)
-{
-    Q_UNUSED(args);
-
-    return true;
-}
-
 void QDataflowMetaObject::onDataReceved(int inlet, void *data)
 {
     Q_UNUSED(inlet);
