@@ -474,6 +474,11 @@ QDebug operator<<(QDebug debug, const QDataflowModelConnection *conn)
     return debug << *conn;
 }
 
+QDataflowMetaObject::QDataflowMetaObject(QDataflowModelNode *node)
+    : node_(node)
+{
+}
+
 bool QDataflowMetaObject::init(QStringList args)
 {
     Q_UNUSED(args);
