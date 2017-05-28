@@ -65,9 +65,11 @@ QDataflowModelConnection * QDataflowModel::connect(QDataflowModelConnection *con
 
 QDataflowModelConnection * QDataflowModel::connect(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet)
 {
-    if(!sourceNode || !destNode) return;
-    if(!findConnections(sourceNode, sourceOutlet, destNode, destInlet).isEmpty()) return;
-    addConnection(new QDataflowModelConnection(this, sourceNode->outlet(sourceOutlet), destNode->inlet(destInlet)));
+    if(!sourceNode || !destNode) return 0L;
+    if(!findConnections(sourceNode, sourceOutlet, destNode, destInlet).isEmpty()) return 0L;
+    QDataflowModelConnection *conn = new QDataflowModelConnection(this, sourceNode->outlet(sourceOutlet), destNode->inlet(destInlet));
+    addConnection(conn);
+    return conn;
 }
 
 void QDataflowModel::disconnect(QDataflowModelConnection *conn)
