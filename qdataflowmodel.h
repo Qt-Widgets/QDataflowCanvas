@@ -233,6 +233,7 @@ public:
 
     virtual bool init(QStringList args);
     QDataflowModelNode * node() {return node_;}
+    void setNode(QDataflowModelNode *node) {node_ = node;}
     QDataflowModelInlet * inlet(int index) {return node_->inlet(index);}
     QDataflowModelOutlet * outlet(int index) {return node_->outlet(index);}
     int inletCount() {return node_->inletCount();}
