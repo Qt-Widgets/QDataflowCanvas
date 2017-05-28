@@ -228,7 +228,7 @@ QDebug operator<<(QDebug debug, const QDataflowModelConnection *conn);
 class QDataflowMetaObject
 {
 public:
-    QDataflowMetaObject(QDataflowModelNode *node);
+    QDataflowMetaObject();
     virtual ~QDataflowMetaObject() {}
 
     virtual bool init(QStringList args);
