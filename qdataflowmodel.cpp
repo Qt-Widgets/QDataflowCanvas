@@ -242,18 +242,21 @@ int QDataflowModelNode::outletCount() const
 
 void QDataflowModelNode::setValid(bool valid)
 {
+    if(valid_ == valid) return;
     valid_ = valid;
     emit validChanged(valid);
 }
 
 void QDataflowModelNode::setPos(QPoint pos)
 {
+    if(pos_ == pos) return;
     pos_ = pos;
     emit posChanged(pos);
 }
 
 void QDataflowModelNode::setText(const QString &text)
 {
+    if(text_ == text) return;
     text_ = text;
     emit textChanged(text);
 }
