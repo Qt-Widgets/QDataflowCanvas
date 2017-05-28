@@ -37,6 +37,11 @@ class QDataflowModel : public QObject
 public:
     explicit QDataflowModel(QObject *parent = 0);
 
+protected:
+    QDataflowModelNode * newNode(QPoint pos, QString text, int inletCount, int outletCount);
+    QDataflowModelConnection * newConnection(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet);
+
+public:
     QDataflowModelNode * create(QPoint pos, QString text, int inletCount, int outletCount);
     void remove(QDataflowModelNode *node);
     QDataflowModelConnection * connect(QDataflowModelConnection *conn);
@@ -79,9 +84,10 @@ private:
 class QDataflowModelNode : public QObject
 {
     Q_OBJECT
-public:
+protected:
     explicit QDataflowModelNode(QDataflowModel *parent, QPoint pos, QString text, int inletCount, int outletCount);
 
+public:
     QDataflowModel * model();
 
     QDataflowMetaObject * dataflowMetaObject() const;
@@ -126,6 +132,8 @@ private:
     QList<QDataflowModelInlet*> inlets_;
     QList<QDataflowModelOutlet*> outlets_;
     QDataflowMetaObject *dataflowMetaObject_;
+
+    friend class QDataflowModel;
 };
 
 QDebug operator<<(QDebug debug, const QDataflowModelNode &node);
@@ -134,9 +142,10 @@ QDebug operator<<(QDebug debug, const QDataflowModelNode *node);
 class QDataflowModelIOlet : public QObject
 {
     Q_OBJECT
-public:
+protected:
     explicit QDataflowModelIOlet(QDataflowModelNode *parent, int index);
 
+public:
     QDataflowModel * model();
 
     QDataflowModelNode * node() const;
@@ -157,7 +166,7 @@ private:
 class QDataflowModelInlet : public QDataflowModelIOlet
 {
     Q_OBJECT
-public:
+protected:
     explicit QDataflowModelInlet(QDataflowModelNode *parent, int index);
 
 signals:
@@ -165,6 +174,8 @@ signals:
 public slots:
 
 private:
+
+    friend class QDataflowModelNode;
 };
 
 QDebug operator<<(QDebug debug, const QDataflowModelInlet &inlet);
@@ -173,7 +184,7 @@ QDebug operator<<(QDebug debug, const QDataflowModelInlet *inlet);
 class QDataflowModelOutlet : public QDataflowModelIOlet
 {
     Q_OBJECT
-public:
+protected:
     explicit QDataflowModelOutlet(QDataflowModelNode *parent, int index);
 
 signals:
@@ -181,6 +192,8 @@ signals:
 public slots:
 
 private:
+
+    friend class QDataflowModelNode;
 };
 
 QDebug operator<<(QDebug debug, const QDataflowModelOutlet &outlet);
@@ -189,9 +202,10 @@ QDebug operator<<(QDebug debug, const QDataflowModelOutlet *outlet);
 class QDataflowModelConnection : public QObject
 {
     Q_OBJECT
-public:
+protected:
     explicit QDataflowModelConnection(QDataflowModel *parent, QDataflowModelOutlet *source, QDataflowModelInlet *dest);
 
+public:
     QDataflowModel * model();
 
     QDataflowModelOutlet * source() const;
@@ -204,6 +218,8 @@ public slots:
 private:
     QDataflowModelOutlet *source_;
     QDataflowModelInlet *dest_;
+
+    friend class QDataflowModel;
 };
 
 QDebug operator<<(QDebug debug, const QDataflowModelConnection &conn);

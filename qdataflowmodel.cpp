@@ -23,9 +23,19 @@ QDataflowModel::QDataflowModel(QObject *parent)
 
 }
 
+QDataflowModelNode * QDataflowModel::newNode(QPoint pos, QString text, int inletCount, int outletCount)
+{
+    return new QDataflowModelNode(this, pos, text, inletCount, outletCount);
+}
+
+QDataflowModelConnection * QDataflowModel::newConnection(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet)
+{
+    return new QDataflowModelConnection(this, sourceNode->outlet(sourceOutlet), destNode->inlet(destInlet));
+}
+
 QDataflowModelNode * QDataflowModel::create(QPoint pos, QString text, int inletCount, int outletCount)
 {
-    QDataflowModelNode *node = new QDataflowModelNode(this, pos, text, inletCount, outletCount);
+    QDataflowModelNode *node = newNode(pos, text, inletCount, outletCount);
     nodes_.insert(node);
     QObject::connect(node, &QDataflowModelNode::validChanged, this, &QDataflowModel::onValidChanged);
     QObject::connect(node, &QDataflowModelNode::posChanged, this, &QDataflowModel::onPosChanged);
@@ -67,7 +77,7 @@ QDataflowModelConnection * QDataflowModel::connect(QDataflowModelNode *sourceNod
 {
     if(!sourceNode || !destNode) return 0L;
     if(!findConnections(sourceNode, sourceOutlet, destNode, destInlet).isEmpty()) return 0L;
-    QDataflowModelConnection *conn = new QDataflowModelConnection(this, sourceNode->outlet(sourceOutlet), destNode->inlet(destInlet));
+    QDataflowModelConnection *conn = newConnection(sourceNode, sourceOutlet, destNode, destInlet);
     addConnection(conn);
     return conn;
 }
