@@ -118,14 +118,11 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(model, &QDataflowModel::nodeAdded, this, &MainWindow::onNodeAdded);
 
     // set up a small dataflow graph:
-    QDataflowModelNode *source = new QDataflowModelNode(model, QPoint(100, 50), "source", 0, 0);
-    QDataflowModelNode *add = new QDataflowModelNode(model, QPoint(100, 100), "add 5", 0, 0);
-    QDataflowModelNode *sink = new QDataflowModelNode(model, QPoint(100, 150), "sink", 0, 0);
-    model->addNode(source);
-    model->addNode(add);
-    model->addNode(sink);
-    model->addConnection(source->outlet(0), add->inlet(0));
-    model->addConnection(add->outlet(0), sink->inlet(0));
+    QDataflowModelNode *source = model->create(QPoint(100, 50), "source", 0, 0);
+    QDataflowModelNode *add = model->create(QPoint(100, 100), "add 5", 0, 0);
+    QDataflowModelNode *sink = model->create(QPoint(100, 150), "sink", 0, 0);
+    model->connect(source, 0, add, 0);
+    model->connect(add, 0, sink, 0);
 }
 
 MainWindow::~MainWindow()

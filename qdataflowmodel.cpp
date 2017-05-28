@@ -23,11 +23,9 @@ QDataflowModel::QDataflowModel(QObject *parent)
 
 }
 
-void QDataflowModel::addNode(QDataflowModelNode *node)
+QDataflowModelNode * QDataflowModel::create(QPoint pos, QString text, int inletCount, int outletCount)
 {
-    if(!node) return;
-    if(nodes_.contains(node)) return;
-    node->setParent(this);
+    QDataflowModelNode *node = new QDataflowModelNode(this, pos, text, inletCount, outletCount);
     nodes_.insert(node);
     QObject::connect(node, &QDataflowModelNode::validChanged, this, &QDataflowModel::onValidChanged);
     QObject::connect(node, &QDataflowModelNode::posChanged, this, &QDataflowModel::onPosChanged);
@@ -35,9 +33,10 @@ void QDataflowModel::addNode(QDataflowModelNode *node)
     QObject::connect(node, &QDataflowModelNode::inletCountChanged, this, &QDataflowModel::onInletCountChanged);
     QObject::connect(node, &QDataflowModelNode::outletCountChanged, this, &QDataflowModel::onOutletCountChanged);
     emit nodeAdded(node);
+    return node;
 }
 
-void QDataflowModel::removeNode(QDataflowModelNode *node)
+void QDataflowModel::remove(QDataflowModelNode *node)
 {
     if(!node) return;
     if(!nodes_.contains(node)) return;
@@ -56,6 +55,39 @@ void QDataflowModel::removeNode(QDataflowModelNode *node)
     emit nodeRemoved(node);
 }
 
+QDataflowModelConnection * QDataflowModel::connect(QDataflowModelConnection *conn)
+{
+    if(!conn) return 0L;
+    if(!findConnections(conn).isEmpty()) return 0L;
+    addConnection(conn);
+    return conn;
+}
+
+QDataflowModelConnection * QDataflowModel::connect(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet)
+{
+    if(!sourceNode || !destNode) return;
+    if(!findConnections(sourceNode, sourceOutlet, destNode, destInlet).isEmpty()) return;
+    addConnection(new QDataflowModelConnection(this, sourceNode->outlet(sourceOutlet), destNode->inlet(destInlet)));
+}
+
+void QDataflowModel::disconnect(QDataflowModelConnection *conn)
+{
+    if(!conn) return;
+    foreach(QDataflowModelConnection *conn, findConnections(conn))
+    {
+        removeConnection(conn);
+    }
+}
+
+void QDataflowModel::disconnect(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet)
+{
+    if(!sourceNode || !destNode) return;
+    foreach(QDataflowModelConnection *conn, findConnections(sourceNode, sourceOutlet, destNode, destInlet))
+    {
+        removeConnection(conn);
+    }
+}
+
 void QDataflowModel::addConnection(QDataflowModelConnection *conn)
 {
     if(!conn) return;
@@ -65,44 +97,12 @@ void QDataflowModel::addConnection(QDataflowModelConnection *conn)
     emit connectionAdded(conn);
 }
 
-void QDataflowModel::addConnection(QDataflowModelOutlet *outlet, QDataflowModelInlet *inlet)
-{
-    if(!outlet || !inlet) return;
-    if(!findConnections(outlet, inlet).isEmpty()) return;
-    addConnection(new QDataflowModelConnection(this, outlet, inlet));
-}
-
-void QDataflowModel::addConnection(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet)
-{
-    if(!sourceNode || !destNode) return;
-    if(!findConnections(sourceNode, sourceOutlet, destNode, destInlet).isEmpty()) return;
-    addConnection(new QDataflowModelConnection(this, sourceNode->outlet(sourceOutlet), destNode->inlet(destInlet)));
-}
-
 void QDataflowModel::removeConnection(QDataflowModelConnection *conn)
 {
     if(!conn) return;
     if(!connections_.contains(conn)) return;
     connections_.remove(conn);
     emit connectionRemoved(conn);
-}
-
-void QDataflowModel::removeConnection(QDataflowModelOutlet *outlet, QDataflowModelInlet *inlet)
-{
-    if(!outlet || !inlet) return;
-    foreach(QDataflowModelConnection *conn, findConnections(outlet, inlet))
-    {
-        removeConnection(conn);
-    }
-}
-
-void QDataflowModel::removeConnection(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet)
-{
-    if(!sourceNode || !destNode) return;
-    foreach(QDataflowModelConnection *conn, findConnections(sourceNode, sourceOutlet, destNode, destInlet))
-    {
-        removeConnection(conn);
-    }
 }
 
 QList<QDataflowModelConnection*> QDataflowModel::findConnections(QDataflowModelConnection *conn) const
@@ -271,7 +271,7 @@ void QDataflowModelNode::removeLastInlet()
     if(inlets_.isEmpty()) return;
     QDataflowModelInlet *inlet = inlets_.back();
     foreach(QDataflowModelConnection *conn, inlet->connections())
-        model()->removeConnection(conn);
+        model()->disconnect(conn);
     inlets_.pop_back();
     emit inletCountChanged(inletCount());
 }
@@ -303,7 +303,7 @@ void QDataflowModelNode::removeLastOutlet()
     if(outlets_.isEmpty()) return;
     QDataflowModelOutlet *outlet = outlets_.back();
     foreach(QDataflowModelConnection *conn, outlet->connections())
-        model()->removeConnection(conn);
+        model()->disconnect(conn);
     outlets_.pop_back();
     emit outletCountChanged(outletCount());
 }

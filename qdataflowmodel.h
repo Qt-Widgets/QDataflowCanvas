@@ -37,14 +37,16 @@ class QDataflowModel : public QObject
 public:
     explicit QDataflowModel(QObject *parent = 0);
 
-    void addNode(QDataflowModelNode *node);
-    void removeNode(QDataflowModelNode *node);
+    QDataflowModelNode * create(QPoint pos, QString text, int inletCount, int outletCount);
+    void remove(QDataflowModelNode *node);
+    QDataflowModelConnection * connect(QDataflowModelConnection *conn);
+    QDataflowModelConnection * connect(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet);
+    void disconnect(QDataflowModelConnection *conn);
+    void disconnect(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet);
+
+private:
     void addConnection(QDataflowModelConnection *conn);
-    void addConnection(QDataflowModelOutlet *outlet, QDataflowModelInlet *inlet);
-    void addConnection(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet);
     void removeConnection(QDataflowModelConnection *conn);
-    void removeConnection(QDataflowModelOutlet *outlet, QDataflowModelInlet *inlet);
-    void removeConnection(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet);
     QList<QDataflowModelConnection*> findConnections(QDataflowModelConnection *conn) const;
     QList<QDataflowModelConnection*> findConnections(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet) const;
     QList<QDataflowModelConnection*> findConnections(QDataflowModelOutlet *source, QDataflowModelInlet *dest) const;

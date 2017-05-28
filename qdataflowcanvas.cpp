@@ -190,9 +190,8 @@ void QDataflowCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     QGraphicsItem *item = itemAt(event->pos());
     if(!item)
     {
-        QPointF pos(mapToScene(event->pos()));
-        QDataflowModelNode *node = new QDataflowModelNode(model(), QPoint(pos.x(), pos.y()), "", 0, 0);
-        model()->addNode(node);
+        QPoint pos(mapToScene(event->pos()).toPoint());
+        model_->create(pos, "", 0, 0);
         event->accept();
         return;
     }
@@ -207,9 +206,12 @@ void QDataflowCanvas::keyPressEvent(QKeyEvent *event)
     if(event->key() == Qt::Key_Backspace && !isSomeNodeInEditMode())
     {
         foreach(QDataflowConnection *conn, selectedConnections())
-            model()->removeConnection(conn->modelConnection());
+            model()->disconnect(
+                        conn->source()->node()->modelNode(), conn->source()->index(),
+                        conn->dest()->node()->modelNode(), conn->dest()->index()
+                        );
         foreach(QDataflowNode *node, selectedNodes())
-            model()->removeNode(node->modelNode());
+            model()->remove(node->modelNode());
         event->accept();
     }
 
@@ -682,7 +684,7 @@ void QDataflowOutlet::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     if(QDataflowInlet *inlet = node()->canvas()->itemAtT<QDataflowInlet>(event->scenePos()))
     {
         QDataflowModel *model = node()->canvas()->model();
-        model->addConnection(node()->modelNode(), index(), inlet->node()->modelNode(), inlet->index());
+        model->connect(node()->modelNode(), index(), inlet->node()->modelNode(), inlet->index());
     }
 }
 
