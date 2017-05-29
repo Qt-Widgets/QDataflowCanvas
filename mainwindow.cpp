@@ -22,21 +22,21 @@
 class DFSource : public QDataflowMetaObject
 {
 public:
-    bool init(QStringList args)
+    DFSource(QDataflowModelNode *node, QStringList args)
+        : QDataflowMetaObject(node)
     {
         Q_UNUSED(args);
 
         setInletCount(0);
         setOutletCount(1);
-
-        return true;
     }
 };
 
 class DFMathBinOp : public QDataflowMetaObject
 {
 public:
-    bool init(QStringList args)
+    DFMathBinOp(QDataflowModelNode *node, QStringList args)
+        : QDataflowMetaObject(node)
     {
         s = 0;
 
@@ -47,8 +47,6 @@ public:
 
         if(args.length() > 1)
             s = args[1].toLong();
-
-        return true;
     }
 
     void onDataReceved(int inlet, void *data)
@@ -77,16 +75,13 @@ private:
 class DFSink : public QDataflowMetaObject
 {
 public:
-    DFSink(QLineEdit *e) : e_(e) {}
-
-    bool init(QStringList args)
+    DFSink(QDataflowModelNode *node, QStringList args, QLineEdit *e)
+        : QDataflowMetaObject(node), e_(e)
     {
         Q_UNUSED(args);
 
         setInletCount(1);
         setOutletCount(0);
-
-        return true;
     }
 
     void onDataReceved(int inlet, void *data)
@@ -145,15 +140,10 @@ void MainWindow::setupNode(QDataflowModelNode *node)
         node->setValid(false);
         return;
     }
-    if(toks[0] == "source") {sourceNode = node; node->setDataflowMetaObject(new DFSource());}
-    else if(toks[0] == "sink") node->setDataflowMetaObject(new DFSink(result));
-    else node->setDataflowMetaObject(new DFMathBinOp());
-    bool ok = node->dataflowMetaObject()->init(toks);
-    if(!ok)
-    {
-        qDebug() << "initialization failed for:" << node->text();
-    }
-    node->setValid(ok);
+    if(toks[0] == "source") {sourceNode = node; node->setDataflowMetaObject(new DFSource(node, toks));}
+    else if(toks[0] == "sink") node->setDataflowMetaObject(new DFSink(node, toks, result));
+    else node->setDataflowMetaObject(new DFMathBinOp(node, toks));
+    node->setValid(true);
 }
 
 void MainWindow::processData()
