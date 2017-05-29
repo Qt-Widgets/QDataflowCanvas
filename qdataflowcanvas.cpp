@@ -263,9 +263,12 @@ void QDataflowCanvas::onNodeValidChanged(QDataflowModelNode *mdlnode, bool valid
 void QDataflowCanvas::onNodePosChanged(QDataflowModelNode *mdlnode, QPoint pos)
 {
     QDataflowNode *uinode = node(mdlnode);
-    // XXX: in the first ItemPositionChanged event mdlnode is not yet mapped to a QDataflowNode
     if(uinode)
+    {
+        uinode->setFlag(QGraphicsItem::ItemSendsGeometryChanges, false);
         uinode->setPos(pos);
+        uinode->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
+    }
 }
 
 void QDataflowCanvas::onNodeTextChanged(QDataflowModelNode *mdlnode, QString text)
