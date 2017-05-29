@@ -484,7 +484,8 @@ QDebug operator<<(QDebug debug, const QDataflowModelConnection *conn)
     return debug << *conn;
 }
 
-QDataflowMetaObject::QDataflowMetaObject()
+QDataflowMetaObject::QDataflowMetaObject(QDataflowModelNode *node)
+    : node_(node)
 {
 }
 

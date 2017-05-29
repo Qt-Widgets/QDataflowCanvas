@@ -231,7 +231,7 @@ QDebug operator<<(QDebug debug, const QDataflowModelConnection *conn);
 class QDataflowMetaObject
 {
 public:
-    QDataflowMetaObject();
+    QDataflowMetaObject(QDataflowModelNode *node);
     virtual ~QDataflowMetaObject() {}
 
     QDataflowModelNode * node() {return node_;}
