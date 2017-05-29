@@ -25,15 +25,17 @@ QDataflowModel::QDataflowModel(QObject *parent)
 
 QDataflowModelNode * QDataflowModel::newNode(QPoint pos, QString text, int inletCount, int outletCount)
 {
-    QDataflowModelNode *node = new QDataflowModelNode(this, pos, text, inletCount, outletCount);
+    QDataflowModelNode *node = new QDataflowModelNode(0L, pos, text, inletCount, outletCount);
     node->moveToThread(thread());
+    node->setParent(this);
     return node;
 }
 
 QDataflowModelConnection * QDataflowModel::newConnection(QDataflowModelNode *sourceNode, int sourceOutlet, QDataflowModelNode *destNode, int destInlet)
 {
-    QDataflowModelConnection *conn = new QDataflowModelConnection(this, sourceNode->outlet(sourceOutlet), destNode->inlet(destInlet));
+    QDataflowModelConnection *conn = new QDataflowModelConnection(0L, sourceNode->outlet(sourceOutlet), destNode->inlet(destInlet));
     conn->moveToThread(thread());
+    conn->setParent(this);
     return conn;
 }
 
