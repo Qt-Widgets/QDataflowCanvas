@@ -158,6 +158,7 @@ public:
     QString type() const;
 
     void addConnection(QDataflowModelConnection *conn);
+    void removeConnection(QDataflowModelConnection *conn);
     QList<QDataflowModelConnection*> connections() const;
 
 signals:
@@ -166,6 +167,7 @@ public slots:
 
 private:
     QList<QDataflowModelConnection*> connections_;
+    QDataflowModelNode *node_;
     int index_;
     QString type_;
 };

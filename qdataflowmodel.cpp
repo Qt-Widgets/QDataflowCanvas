@@ -122,6 +122,8 @@ void QDataflowModel::addConnection(QDataflowModelConnection *conn)
     if(!findConnections(conn).isEmpty()) return;
     conn->setParent(this);
     connections_.insert(conn);
+    conn->source()->addConnection(conn);
+    conn->dest()->addConnection(conn);
     emit connectionAdded(conn);
 }
 
@@ -129,6 +131,8 @@ void QDataflowModel::removeConnection(QDataflowModelConnection *conn)
 {
     if(!conn) return;
     if(!connections_.contains(conn)) return;
+    conn->source()->removeConnection(conn);
+    conn->dest()->removeConnection(conn);
     connections_.remove(conn);
     emit connectionRemoved(conn);
 }
@@ -391,19 +395,19 @@ QDebug operator<<(QDebug debug, const QDataflowModelNode *node)
 }
 
 QDataflowModelIOlet::QDataflowModelIOlet(QDataflowModelNode *parent, int index, QString type)
-    : QObject(parent), index_(index), type_(type)
+    : QObject(parent), node_(parent), index_(index), type_(type)
 {
 
 }
 
 QDataflowModel * QDataflowModelIOlet::model()
 {
-    return node()->model();
+    return node_->model();
 }
 
 QDataflowModelNode * QDataflowModelIOlet::node() const
 {
-    return static_cast<QDataflowModelNode*>(parent());
+    return node_;
 }
 
 int QDataflowModelIOlet::index() const
@@ -419,6 +423,11 @@ QString QDataflowModelIOlet::type() const
 void QDataflowModelIOlet::addConnection(QDataflowModelConnection *conn)
 {
     connections_.push_back(conn);
+}
+
+void QDataflowModelIOlet::removeConnection(QDataflowModelConnection *conn)
+{
+    connections_.removeAll(conn);
 }
 
 QList<QDataflowModelConnection*> QDataflowModelIOlet::connections() const
@@ -469,8 +478,6 @@ QDebug operator<<(QDebug debug, const QDataflowModelOutlet *outlet)
 QDataflowModelConnection::QDataflowModelConnection(QDataflowModel *parent, QDataflowModelOutlet *source, QDataflowModelInlet *dest)
     : QObject(parent), source_(source), dest_(dest)
 {
-    source->addConnection(this);
-    dest->addConnection(this);
 }
 
 QDataflowModel * QDataflowModelConnection::model()
