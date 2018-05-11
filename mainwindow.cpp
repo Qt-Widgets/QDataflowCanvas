@@ -17,6 +17,7 @@
 #include "mainwindow.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <QMenu>
 #include <QDebug>
 
 class DFSource : public QDataflowMetaObject
@@ -101,6 +102,9 @@ MainWindow::MainWindow(QWidget *parent)
 {
     setupUi(this);
 
+    QMenu *modelMenu = menuBar()->addMenu(tr("&Model"));
+    modelMenu->addAction("Dump to console", this, &MainWindow::onDumpModel);
+
     classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink";
     canvas->setCompletion(this);
 
@@ -161,4 +165,18 @@ void MainWindow::onNodeTextChanged(QDataflowModelNode *node, QString text)
 {
     Q_UNUSED(text);
     setupNode(node);
+}
+
+void MainWindow::onDumpModel()
+{
+    QDataflowModel *model = canvas->model();
+
+    foreach(QDataflowModelNode *node, model->nodes())
+    {
+        qDebug() << "DUMP: node: " << node;
+    }
+    foreach(QDataflowModelConnection *conn, model->connections())
+    {
+        qDebug() << "DUMP: connection: " << conn;
+    }
 }
