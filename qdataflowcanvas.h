@@ -299,7 +299,7 @@ public:
 
 private:
     QGraphicsSimpleTextItem *text_;
-    QGraphicsPolygonItem *shape_;
+    QGraphicsPathItem *shape_;
     QPointF offset_;
 
     friend class QDataflowCanvas;
