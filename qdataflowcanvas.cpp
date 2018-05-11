@@ -601,6 +601,7 @@ void QDataflowNode::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 QDataflowIOlet::QDataflowIOlet(QDataflowNode *node, int index)
     : canvas_(node->canvas()), node_(node), index_(index)
 {
+    setAcceptHoverEvents(true);
 }
 
 void QDataflowIOlet::addConnection(QDataflowConnection *connection)
@@ -627,6 +628,25 @@ void QDataflowIOlet::adjustConnections() const
     }
 }
 
+void QDataflowIOlet::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
+{
+    Q_UNUSED(event);
+
+    tooltip_->setVisible(true);
+    QPointF p = tooltip_->mapToScene(QPointF(0,0));
+    tooltip_->setParentItem(nullptr);
+    tooltip_->setPos(p);
+}
+
+void QDataflowIOlet::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
+{
+    Q_UNUSED(event);
+
+    tooltip_->setVisible(false);
+    tooltip_->setParentItem(this);
+    tooltip_->setPos(QPointF(0,0));
+}
+
 QRectF QDataflowIOlet::boundingRect() const
 {
     QDataflowNode *n = node();
@@ -648,12 +668,19 @@ void QDataflowIOlet::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
 QDataflowInlet::QDataflowInlet(QDataflowNode *node, int index)
     : QDataflowIOlet(node, index)
 {
+    tooltip_ = new QDataflowTooltip(this, node->modelNode()->inlet(index)->type(), QPointF(0, -20));
+    tooltip_->setZValue(std::numeric_limits<qreal>::max());
+    tooltip_->setVisible(false);
 }
 
 QDataflowOutlet::QDataflowOutlet(QDataflowNode *node, int index)
     : QDataflowIOlet(node, index), tmpConn_(0L)
 
 {
+    tooltip_ = new QDataflowTooltip(this, node->modelNode()->outlet(index)->type(), QPointF(0, 20));
+    tooltip_->setZValue(std::numeric_limits<qreal>::max());
+    tooltip_->setVisible(false);
+
     setCursor(Qt::CrossCursor);
     setAcceptedMouseButtons(Qt::LeftButton);
 }
@@ -923,8 +950,8 @@ void QDataflowNodeTextLabel::complete()
     setCompletion(completionList);
 }
 
-QDataflowTooltip::QDataflowTooltip(QDataflowCanvas *canvas_, QString text, QPointF offset)
-    : offset_(offset)
+QDataflowTooltip::QDataflowTooltip(QGraphicsItem *parentItem, QString text, QPointF offset)
+    : QGraphicsItemGroup(parentItem), offset_(offset)
 {
     shape_ = new QGraphicsPathItem(this);
     shape_->setPen(QPen(Qt::black, 1, Qt::SolidLine));

@@ -305,9 +305,9 @@ void QDataflowModelNode::setText(const QString &text)
     emit textChanged(text);
 }
 
-void QDataflowModelNode::addInlet(QString type)
+void QDataflowModelNode::addInlet(QString name, QString type)
 {
-    addInlet(new QDataflowModelInlet(this, inletCount(), type));
+    addInlet(new QDataflowModelInlet(this, inletCount(), name, type));
 }
 
 void QDataflowModelNode::removeLastInlet()
@@ -347,7 +347,7 @@ void QDataflowModelNode::setInletTypes(QStringList types)
         removeLastInlet();
 
     foreach(const QString &type, types)
-        addInlet(type);
+        addInlet("", type);
 
     blockSignals(shouldBlockSignals);
 
@@ -368,9 +368,9 @@ void QDataflowModelNode::setInletTypes(std::initializer_list<const char*> types_
     setInletTypes(types);
 }
 
-void QDataflowModelNode::addOutlet(QString type)
+void QDataflowModelNode::addOutlet(QString name, QString type)
 {
-    addOutlet(new QDataflowModelOutlet(this, outletCount(), type));
+    addOutlet(new QDataflowModelOutlet(this, outletCount(), name, type));
 }
 
 void QDataflowModelNode::removeLastOutlet()
@@ -410,7 +410,7 @@ void QDataflowModelNode::setOutletTypes(QStringList types)
         removeLastOutlet();
 
     foreach(const QString &type, types)
-        addOutlet(type);
+        addOutlet("", type);
 
     blockSignals(shouldBlockSignals);
 
@@ -461,8 +461,8 @@ QDebug operator<<(QDebug debug, const QDataflowModelNode *node)
     return debug << *node;
 }
 
-QDataflowModelIOlet::QDataflowModelIOlet(QDataflowModelNode *parent, int index, QString type)
-    : QObject(parent), node_(parent), index_(index), type_(type)
+QDataflowModelIOlet::QDataflowModelIOlet(QDataflowModelNode *parent, int index, QString name, QString type)
+    : QObject(parent), node_(parent), index_(index), name_(name), type_(type)
 {
 
 }
@@ -502,8 +502,8 @@ QList<QDataflowModelConnection*> QDataflowModelIOlet::connections() const
     return connections_;
 }
 
-QDataflowModelInlet::QDataflowModelInlet(QDataflowModelNode *parent, int index, QString type)
-    : QDataflowModelIOlet(parent, index, type)
+QDataflowModelInlet::QDataflowModelInlet(QDataflowModelNode *parent, int index, QString name, QString type)
+    : QDataflowModelIOlet(parent, index, name, type)
 {
 
 }
@@ -528,8 +528,8 @@ QDebug operator<<(QDebug debug, const QDataflowModelInlet *inlet)
     return debug << *inlet;
 }
 
-QDataflowModelOutlet::QDataflowModelOutlet(QDataflowModelNode *parent, int index, QString type)
-    : QDataflowModelIOlet(parent, index, type)
+QDataflowModelOutlet::QDataflowModelOutlet(QDataflowModelNode *parent, int index, QString name, QString type)
+    : QDataflowModelIOlet(parent, index, name, type)
 {
 
 }

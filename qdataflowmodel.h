@@ -119,12 +119,12 @@ signals:
 public slots:
     void setPos(QPoint pos);
     void setText(const QString &text);
-    void addInlet(QString type = "*");
+    void addInlet(QString name = "", QString type = "*");
     void removeLastInlet();
     void setInletCount(int count);
     void setInletTypes(QStringList types);
     void setInletTypes(std::initializer_list<const char *> types);
-    void addOutlet(QString type = "*");
+    void addOutlet(QString name = "", QString type = "*");
     void removeLastOutlet();
     void setOutletCount(int count);
     void setOutletTypes(QStringList types);
@@ -152,13 +152,14 @@ class QDataflowModelIOlet : public QObject
 {
     Q_OBJECT
 protected:
-    explicit QDataflowModelIOlet(QDataflowModelNode *parent, int index, QString type = "*");
+    explicit QDataflowModelIOlet(QDataflowModelNode *parent, int index, QString name = "", QString type = "*");
 
 public:
     QDataflowModel * model();
 
     QDataflowModelNode * node() const;
     int index() const;
+    QString name() const;
     QString type() const;
 
     void addConnection(QDataflowModelConnection *conn);
@@ -173,6 +174,7 @@ private:
     QList<QDataflowModelConnection*> connections_;
     QDataflowModelNode *node_;
     int index_;
+    QString name_;
     QString type_;
 };
 
@@ -180,7 +182,7 @@ class QDataflowModelInlet : public QDataflowModelIOlet
 {
     Q_OBJECT
 protected:
-    explicit QDataflowModelInlet(QDataflowModelNode *parent, int index, QString type = "*");
+    explicit QDataflowModelInlet(QDataflowModelNode *parent, int index, QString name = "", QString type = "*");
 
 public:
     bool canAcceptConnectionFrom(QDataflowModelOutlet *outlet);
@@ -201,7 +203,7 @@ class QDataflowModelOutlet : public QDataflowModelIOlet
 {
     Q_OBJECT
 protected:
-    explicit QDataflowModelOutlet(QDataflowModelNode *parent, int index, QString type = "*");
+    explicit QDataflowModelOutlet(QDataflowModelNode *parent, int index, QString name = "", QString type = "*");
 
 public:
     bool canMakeConnectionTo(QDataflowModelInlet *inlet);

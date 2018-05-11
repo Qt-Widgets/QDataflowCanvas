@@ -32,6 +32,7 @@ class QDataflowOutlet;
 class QDataflowConnection;
 class QDataflowTextCompletion;
 class QDataflowNodeTextLabel;
+class QDataflowTooltip;
 
 enum QDataflowItemType {
     QDataflowItemTypeNode = QGraphicsItem::UserType + 1,
@@ -180,6 +181,9 @@ public:
 
     QDataflowCanvas * canvas() const {return canvas_;}
 
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
+
 protected:
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
@@ -189,6 +193,9 @@ private:
     QList<QDataflowConnection*> connections_;
     QDataflowNode *node_;
     int index_;
+
+protected:
+    QDataflowTooltip *tooltip_;
 
     friend class QDataflowCanvas;
     friend class QDataflowNode;
@@ -291,7 +298,7 @@ private:
 class QDataflowTooltip : public QGraphicsItemGroup
 {
 protected:
-    QDataflowTooltip(QDataflowCanvas *canvas_, QString text, QPointF offset);
+    QDataflowTooltip(QGraphicsItem *parentItem, QString text, QPointF offset);
 
 public:
     void setText(QString text);
@@ -303,6 +310,8 @@ private:
     QPointF offset_;
 
     friend class QDataflowCanvas;
+    friend class QDataflowInlet;
+    friend class QDataflowOutlet;
 };
 
 class QDataflowTextCompletion
