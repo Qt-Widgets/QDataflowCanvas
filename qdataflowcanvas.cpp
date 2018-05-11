@@ -945,13 +945,15 @@ void QDataflowTooltip::setText(QString text)
 
 void QDataflowTooltip::adjust()
 {
-    const int kb = 4;
-    QRectF br = text_->boundingRect().adjusted(-kb, -kb, kb, kb);
-    QPointF hoff(6, 0);
+    text_->setPos(offset_ - text_->boundingRect().center());
+    const int kb = 4; // margin
+    const int kw = 6; // tip width
+    QRectF br = text_->boundingRect().adjusted(-kb, -kb, kb, kb).translated(text_->pos());
+    QPointF center(qBound(br.left() + kw, 0.0, br.right() - kw), br.center().y());
+    double a = atan2(-center.y(), -center.x());
     QPainterPath pTip;
-    pTip.moveTo(offset_);
-    pTip.lineTo(br.center() - hoff);
-    pTip.lineTo(br.center() + hoff);
+    pTip.lineTo(center + QPointF(cos(a + M_PI_4), sin(a + M_PI_4)) * kw);
+    pTip.lineTo(center + QPointF(cos(a - M_PI_4), sin(a - M_PI_4)) * kw);
     pTip.closeSubpath();
     QPainterPath pRect;
     pRect.addRoundedRect(br, 1.5 * kb, 1.5 * kb);
