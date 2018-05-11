@@ -696,8 +696,16 @@ void QDataflowOutlet::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     if(tmpConn_)
     {
         tmpConn_->setLine(QLineF(QPointF(), tmpConn_->mapFromScene(event->scenePos())));
+
+        // inlet under mouse:
         QDataflowInlet *inlet = node()->canvas()->itemAtT<QDataflowInlet>(event->scenePos());
-        tmpConn_->setPen(QPen(inlet ? Qt::black : Qt::red, 1, inlet ? Qt::SolidLine : Qt::DotLine, Qt::RoundCap, Qt::RoundJoin));
+
+        // check if connection can be done:
+        QDataflowModelOutlet *mdloutlet = node()->modelNode()->outlet(index());
+        QDataflowModelInlet *mdlinlet = inlet ? inlet->node()->modelNode()->inlet(inlet->index()) : nullptr;
+        bool canDo = inlet && mdloutlet->canMakeConnectionTo(mdlinlet) && mdlinlet->canAcceptConnectionFrom(mdloutlet);
+
+        tmpConn_->setPen(QPen(canDo ? Qt::black : Qt::red, 1, inlet ? Qt::SolidLine : Qt::DotLine, Qt::RoundCap, Qt::RoundJoin));
     }
 }
 
