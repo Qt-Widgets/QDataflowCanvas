@@ -122,9 +122,13 @@ public slots:
     void addInlet(QString type = "*");
     void removeLastInlet();
     void setInletCount(int count);
+    void setInletTypes(QStringList types);
+    void setInletTypes(std::initializer_list<const char *> types);
     void addOutlet(QString type = "*");
     void removeLastOutlet();
     void setOutletCount(int count);
+    void setOutletTypes(QStringList types);
+    void setOutletTypes(std::initializer_list<const char *> types);
 
 protected slots:
     void addInlet(QDataflowModelInlet *inlet);
@@ -178,6 +182,9 @@ class QDataflowModelInlet : public QDataflowModelIOlet
 protected:
     explicit QDataflowModelInlet(QDataflowModelNode *parent, int index, QString type = "*");
 
+public:
+    bool canAcceptConnectionFrom(QDataflowModelOutlet *outlet);
+
 signals:
 
 public slots:
@@ -195,6 +202,9 @@ class QDataflowModelOutlet : public QDataflowModelIOlet
     Q_OBJECT
 protected:
     explicit QDataflowModelOutlet(QDataflowModelNode *parent, int index, QString type = "*");
+
+public:
+    bool canMakeConnectionTo(QDataflowModelInlet *inlet);
 
 signals:
 
@@ -246,8 +256,10 @@ public:
     QDataflowModelOutlet * outlet(int index) {return node_->outlet(index);}
     int inletCount() {return node_->inletCount();}
     void setInletCount(int c) {node_->setInletCount(c);}
+    void setInletTypes(std::initializer_list<const char*> types) {node_->setInletTypes(types);}
     int outletCount() {return node_->outletCount();}
     void setOutletCount(int c) {node_->setOutletCount(c);}
+    void setOutletTypes(std::initializer_list<const char*> types) {node_->setOutletTypes(types);}
     virtual void onDataReceved(int inlet, void *data);
     void sendData(int outlet, void *data);
 

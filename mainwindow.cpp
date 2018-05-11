@@ -28,8 +28,8 @@ public:
     {
         Q_UNUSED(args);
 
-        setInletCount(0);
-        setOutletCount(1);
+        //setInletCount(0);
+        setOutletTypes({"int"});
     }
 };
 
@@ -41,8 +41,8 @@ public:
     {
         s = 0;
 
-        setInletCount(2);
-        setOutletCount(1);
+        setInletTypes({"int", "int"});
+        setOutletTypes({"int"});
 
         op = args[0];
 
@@ -73,6 +73,27 @@ private:
     int s;
 };
 
+class DFNum2Str : public QDataflowMetaObject
+{
+public:
+    DFNum2Str(QDataflowModelNode *node, QStringList args)
+        : QDataflowMetaObject(node)
+    {
+        Q_UNUSED(args);
+
+        setInletTypes({"int"});
+        setOutletTypes({"string"});
+    }
+
+    void onDataReceved(int inlet, void *data)
+    {
+        Q_UNUSED(inlet);
+
+        QString s = QString::number(reinterpret_cast<long>(data));
+        sendData(0, reinterpret_cast<void*>(&s));
+    }
+};
+
 class DFSink : public QDataflowMetaObject
 {
 public:
@@ -81,15 +102,15 @@ public:
     {
         Q_UNUSED(args);
 
-        setInletCount(1);
-        setOutletCount(0);
+        setInletTypes({"string"});
+        //setOutletCount(0);
     }
 
     void onDataReceved(int inlet, void *data)
     {
         if(inlet == 0)
         {
-            e_->setText(QString::number(reinterpret_cast<long>(data)));
+            e_->setText(*reinterpret_cast<QString*>(data));
         }
     }
 
@@ -105,7 +126,7 @@ MainWindow::MainWindow(QWidget *parent)
     QMenu *modelMenu = menuBar()->addMenu(tr("&Model"));
     modelMenu->addAction("Dump to console", this, &MainWindow::onDumpModel);
 
-    classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink";
+    classList << "add" << "sub" << "mul" << "div" << "pow" << "source" << "sink" << "num2str";
     canvas->setCompletion(this);
 
     QDataflowModel *model = canvas->model();
@@ -117,11 +138,13 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(model, &QDataflowModel::nodeAdded, this, &MainWindow::onNodeAdded);
 
     // set up a small dataflow graph:
-    QDataflowModelNode *source = model->create(QPoint(100, 50), "source", 0, 0);
-    QDataflowModelNode *add = model->create(QPoint(100, 100), "add 5", 0, 0);
-    QDataflowModelNode *sink = model->create(QPoint(100, 150), "sink", 0, 0);
+    QDataflowModelNode *source = model->create(QPoint(100, 10), "source", 0, 0);
+    QDataflowModelNode *add = model->create(QPoint(100, 60), "add 5", 0, 0);
+    QDataflowModelNode *num2str = model->create(QPoint(100, 110), "num2str", 0, 0);
+    QDataflowModelNode *sink = model->create(QPoint(100, 160), "sink", 0, 0);
     model->connect(source, 0, add, 0);
-    model->connect(add, 0, sink, 0);
+    model->connect(add, 0, num2str, 0);
+    model->connect(num2str, 0, sink, 0);
 }
 
 MainWindow::~MainWindow()
@@ -146,6 +169,7 @@ void MainWindow::setupNode(QDataflowModelNode *node)
     }
     if(toks[0] == "source") {sourceNode = node; node->setDataflowMetaObject(new DFSource(node, toks));}
     else if(toks[0] == "sink") node->setDataflowMetaObject(new DFSink(node, toks, result));
+    else if(toks[0] == "num2str") node->setDataflowMetaObject(new DFNum2Str(node, toks));
     else node->setDataflowMetaObject(new DFMathBinOp(node, toks));
     node->setValid(true);
 }

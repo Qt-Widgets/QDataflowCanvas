@@ -120,6 +120,11 @@ void QDataflowModel::addConnection(QDataflowModelConnection *conn)
 {
     if(!conn) return;
     if(!findConnections(conn).isEmpty()) return;
+    if(!conn->source()->canMakeConnectionTo(conn->dest()) || !conn->dest()->canAcceptConnectionFrom(conn->source()))
+    {
+        qDebug() << "cannoct connect outlet" << conn->source() << "to inlet" << conn->dest();
+        return;
+    }
     conn->setParent(this);
     connections_.insert(conn);
     conn->source()->addConnection(conn);
@@ -332,6 +337,37 @@ void QDataflowModelNode::setInletCount(int count)
     emit inletCountChanged(count);
 }
 
+void QDataflowModelNode::setInletTypes(QStringList types)
+{
+    int oldCount = inletCount();
+
+    bool shouldBlockSignals = blockSignals(true);
+
+    while(inletCount() > 0)
+        removeLastInlet();
+
+    foreach(const QString &type, types)
+        addInlet(type);
+
+    blockSignals(shouldBlockSignals);
+
+    int newCount = inletCount();
+    if(oldCount != newCount)
+        emit inletCountChanged(newCount);
+}
+
+void QDataflowModelNode::setInletTypes(std::initializer_list<const char*> types_)
+{
+    QStringList types;
+
+    for(const char *type : types_)
+    {
+        types << type;
+    }
+
+    setInletTypes(types);
+}
+
 void QDataflowModelNode::addOutlet(QString type)
 {
     addOutlet(new QDataflowModelOutlet(this, outletCount(), type));
@@ -362,6 +398,37 @@ void QDataflowModelNode::setOutletCount(int count)
     blockSignals(shouldBlockSignals);
 
     emit outletCountChanged(count);
+}
+
+void QDataflowModelNode::setOutletTypes(QStringList types)
+{
+    int oldCount = outletCount();
+
+    bool shouldBlockSignals = blockSignals(true);
+
+    while(outletCount() > 0)
+        removeLastOutlet();
+
+    foreach(const QString &type, types)
+        addOutlet(type);
+
+    blockSignals(shouldBlockSignals);
+
+    int newCount = outletCount();
+    if(oldCount != newCount)
+        emit outletCountChanged(newCount);
+}
+
+void QDataflowModelNode::setOutletTypes(std::initializer_list<const char *> types_)
+{
+    QStringList types;
+
+    for(const char *type : types_)
+    {
+        types << type;
+    }
+
+    setOutletTypes(types);
 }
 
 void QDataflowModelNode::addInlet(QDataflowModelInlet *inlet)
@@ -441,6 +508,12 @@ QDataflowModelInlet::QDataflowModelInlet(QDataflowModelNode *parent, int index, 
 
 }
 
+bool QDataflowModelInlet::canAcceptConnectionFrom(QDataflowModelOutlet *outlet)
+{
+    if(type() == "*") return true;
+    return type() == outlet->type();
+}
+
 QDebug operator<<(QDebug debug, const QDataflowModelInlet &inlet)
 {
     QDebugStateSaver stateSaver(debug);
@@ -459,6 +532,12 @@ QDataflowModelOutlet::QDataflowModelOutlet(QDataflowModelNode *parent, int index
     : QDataflowModelIOlet(parent, index, type)
 {
 
+}
+
+bool QDataflowModelOutlet::canMakeConnectionTo(QDataflowModelInlet *inlet)
+{
+    if(inlet->type() == "*") return true;
+    return type() == inlet->type();
 }
 
 QDebug operator<<(QDebug debug, const QDataflowModelOutlet &outlet)
