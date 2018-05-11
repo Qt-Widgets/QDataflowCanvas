@@ -22,6 +22,7 @@
 #include <QList>
 #include <QPoint>
 #include <QString>
+#include <QStringList>
 #include <QDebug>
 
 class QDataflowModelNode;
@@ -89,6 +90,7 @@ class QDataflowModelNode : public QObject
     Q_OBJECT
 protected:
     explicit QDataflowModelNode(QDataflowModel *parent, QPoint pos, QString text, int inletCount, int outletCount);
+    explicit QDataflowModelNode(QDataflowModel *parent, QPoint pos, QString text, QStringList inletTypes, QStringList outletTypes);
 
 public:
     QDataflowModel * model();
@@ -117,10 +119,10 @@ signals:
 public slots:
     void setPos(QPoint pos);
     void setText(const QString &text);
-    void addInlet();
+    void addInlet(QString type = "*");
     void removeLastInlet();
     void setInletCount(int count);
-    void addOutlet();
+    void addOutlet(QString type = "*");
     void removeLastOutlet();
     void setOutletCount(int count);
 
@@ -146,13 +148,14 @@ class QDataflowModelIOlet : public QObject
 {
     Q_OBJECT
 protected:
-    explicit QDataflowModelIOlet(QDataflowModelNode *parent, int index);
+    explicit QDataflowModelIOlet(QDataflowModelNode *parent, int index, QString type = "*");
 
 public:
     QDataflowModel * model();
 
     QDataflowModelNode * node() const;
     int index() const;
+    QString type() const;
 
     void addConnection(QDataflowModelConnection *conn);
     QList<QDataflowModelConnection*> connections() const;
@@ -164,13 +167,14 @@ public slots:
 private:
     QList<QDataflowModelConnection*> connections_;
     int index_;
+    QString type_;
 };
 
 class QDataflowModelInlet : public QDataflowModelIOlet
 {
     Q_OBJECT
 protected:
-    explicit QDataflowModelInlet(QDataflowModelNode *parent, int index);
+    explicit QDataflowModelInlet(QDataflowModelNode *parent, int index, QString type = "*");
 
 signals:
 
@@ -188,7 +192,7 @@ class QDataflowModelOutlet : public QDataflowModelIOlet
 {
     Q_OBJECT
 protected:
-    explicit QDataflowModelOutlet(QDataflowModelNode *parent, int index);
+    explicit QDataflowModelOutlet(QDataflowModelNode *parent, int index, QString type = "*");
 
 signals:
 

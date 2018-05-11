@@ -196,6 +196,13 @@ QDataflowModelNode::QDataflowModelNode(QDataflowModel *parent, QPoint pos, QStri
     for(int i = 0; i < outletCount; i++) addOutlet();
 }
 
+QDataflowModelNode::QDataflowModelNode(QDataflowModel *parent, QPoint pos, QString text, QStringList inletTypes, QStringList outletTypes)
+    : QObject(parent), valid_(false), pos_(pos), text_(text), dataflowMetaObject_(0L)
+{
+    foreach(const QString &inletType, inletTypes) addInlet(inletType);
+    foreach(const QString &outletType, outletTypes) addOutlet(outletType);
+}
+
 QDataflowModel * QDataflowModelNode::model()
 {
     return static_cast<QDataflowModel*>(parent());
@@ -289,9 +296,9 @@ void QDataflowModelNode::setText(const QString &text)
     emit textChanged(text);
 }
 
-void QDataflowModelNode::addInlet()
+void QDataflowModelNode::addInlet(QString type)
 {
-    addInlet(new QDataflowModelInlet(this, inletCount()));
+    addInlet(new QDataflowModelInlet(this, inletCount(), type));
 }
 
 void QDataflowModelNode::removeLastInlet()
@@ -321,9 +328,9 @@ void QDataflowModelNode::setInletCount(int count)
     emit inletCountChanged(count);
 }
 
-void QDataflowModelNode::addOutlet()
+void QDataflowModelNode::addOutlet(QString type)
 {
-    addOutlet(new QDataflowModelOutlet(this, outletCount()));
+    addOutlet(new QDataflowModelOutlet(this, outletCount(), type));
 }
 
 void QDataflowModelNode::removeLastOutlet()
@@ -383,8 +390,8 @@ QDebug operator<<(QDebug debug, const QDataflowModelNode *node)
     return debug << *node;
 }
 
-QDataflowModelIOlet::QDataflowModelIOlet(QDataflowModelNode *parent, int index)
-    : QObject(parent), index_(index)
+QDataflowModelIOlet::QDataflowModelIOlet(QDataflowModelNode *parent, int index, QString type)
+    : QObject(parent), index_(index), type_(type)
 {
 
 }
@@ -404,6 +411,11 @@ int QDataflowModelIOlet::index() const
     return index_;
 }
 
+QString QDataflowModelIOlet::type() const
+{
+    return type_;
+}
+
 void QDataflowModelIOlet::addConnection(QDataflowModelConnection *conn)
 {
     connections_.push_back(conn);
@@ -414,8 +426,8 @@ QList<QDataflowModelConnection*> QDataflowModelIOlet::connections() const
     return connections_;
 }
 
-QDataflowModelInlet::QDataflowModelInlet(QDataflowModelNode *parent, int index)
-    : QDataflowModelIOlet(parent, index)
+QDataflowModelInlet::QDataflowModelInlet(QDataflowModelNode *parent, int index, QString type)
+    : QDataflowModelIOlet(parent, index, type)
 {
 
 }
@@ -425,7 +437,7 @@ QDebug operator<<(QDebug debug, const QDataflowModelInlet &inlet)
     QDebugStateSaver stateSaver(debug);
     debug.nospace() << "QDataflowModelInlet";
     debug.nospace() << "(" << reinterpret_cast<const void*>(&inlet) <<
-                       ", node=" << inlet.node() << ", index=" << inlet.index() << ")";
+                       ", node=" << inlet.node() << ", index=" << inlet.index() << ", type=" << inlet.type() << ")";
     return debug;
 }
 
@@ -434,8 +446,8 @@ QDebug operator<<(QDebug debug, const QDataflowModelInlet *inlet)
     return debug << *inlet;
 }
 
-QDataflowModelOutlet::QDataflowModelOutlet(QDataflowModelNode *parent, int index)
-    : QDataflowModelIOlet(parent, index)
+QDataflowModelOutlet::QDataflowModelOutlet(QDataflowModelNode *parent, int index, QString type)
+    : QDataflowModelIOlet(parent, index, type)
 {
 
 }
@@ -445,7 +457,7 @@ QDebug operator<<(QDebug debug, const QDataflowModelOutlet &outlet)
     QDebugStateSaver stateSaver(debug);
     debug.nospace() << "QDataflowModelOutlet";
     debug.nospace() << "(" << reinterpret_cast<const void*>(&outlet) <<
-                       ", node=" << outlet.node() << ", index=" << outlet.index() << ")";
+                       ", node=" << outlet.node() << ", index=" << outlet.index() << ", type=" << outlet.type() << ")";
     return debug;
 }
 
