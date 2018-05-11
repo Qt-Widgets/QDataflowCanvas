@@ -288,6 +288,23 @@ private:
     friend class QDataflowNode;
 };
 
+class QDataflowTooltip : public QGraphicsItemGroup
+{
+protected:
+    QDataflowTooltip(QDataflowCanvas *canvas_, QString text, QPointF offset);
+
+public:
+    void setText(QString text);
+    void adjust();
+
+private:
+    QGraphicsSimpleTextItem *text_;
+    QGraphicsPolygonItem *shape_;
+    QPointF offset_;
+
+    friend class QDataflowCanvas;
+};
+
 class QDataflowTextCompletion
 {
 public:

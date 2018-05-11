@@ -923,6 +923,48 @@ void QDataflowNodeTextLabel::complete()
     setCompletion(completionList);
 }
 
+QDataflowTooltip::QDataflowTooltip(QDataflowCanvas *canvas_, QString text, QPointF offset)
+    : offset_(offset)
+{
+    shape_ = new QGraphicsPolygonItem(this);
+    shape_->setPen(QPen(Qt::black, 1, Qt::SolidLine));
+    shape_->setBrush(Qt::white);
+
+    text_ = new QGraphicsSimpleTextItem(this);
+    text_->setText(text);
+
+    adjust();
+}
+
+void QDataflowTooltip::setText(QString text)
+{
+    text_->setText(text);
+
+    adjust();
+}
+
+void QDataflowTooltip::adjust()
+{
+    const int kb = 4;
+    QRectF br = text_->boundingRect().adjusted(-kb, -kb, kb, kb);
+
+    // anchor on bottom side
+    qreal y = br.bottom();
+    qreal x = 0.5 * (br.left() - br.right()) + br.right();
+    const int kw = 6;
+
+    QPolygonF p;
+    p << offset_;
+    p << QPointF(x - kw, y);
+    p << br.bottomLeft();
+    p << br.topLeft();
+    p << br.topRight();
+    p << br.bottomRight();
+    p << QPointF(x + kw, y);
+    p << offset_;
+    shape_->setPolygon(p);
+}
+
 void QDataflowTextCompletion::complete(QString nodeText, QStringList &completionList)
 {
     Q_UNUSED(nodeText);
